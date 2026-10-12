@@ -29,6 +29,17 @@
   @stack('styles')
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+@auth
+<script>
+  // Shared global state for the signed-in user (single source mirrored from users.avatar).
+  window.JIACRS = window.JIACRS || {};
+  window.JIACRS.user = {
+    id: {{ auth()->id() }},
+    name: @json(auth()->user()->name),
+    avatarUrl: @json(auth()->user()->avatar_url),
+  };
+</script>
+@endauth
 <div class="app-wrapper">
 
   @include('layouts.partials.navbar')

@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Investigation;
-<<<<<<< HEAD
 use App\Models\Report;
 use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\ReportWorkflow;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class InvestigationController extends Controller
@@ -26,8 +26,9 @@ class InvestigationController extends Controller
     {
         $this->adminOnly();
 
+        // BR-07: only reports that are Under Review and not yet assigned.
         $reports = Report::doesntHave('investigation')
-            ->whereNotIn('status', ['resolved', 'closed', 'rejected'])
+            ->where('status', 'under_review')
             ->get(['id', 'tracking_number', 'subject']);
 
         $investigators = User::role('Investigator')->get(['id', 'name']);
@@ -35,7 +36,7 @@ class InvestigationController extends Controller
         return view('investigations.create', compact('reports', 'investigators'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ReportWorkflow $workflow)
     {
         $this->adminOnly();
 
@@ -43,7 +44,7 @@ class InvestigationController extends Controller
             'report_id' => [
                 'required',
                 Rule::exists('reports', 'id')->whereNull('deleted_at'),
-                Rule::unique('investigations', 'report_id'),   // one investigation per report
+                Rule::unique('investigations', 'report_id'),
             ],
             'investigator_id' => ['required', Rule::exists('users', 'id')],
         ]);
@@ -51,62 +52,49 @@ class InvestigationController extends Controller
         $investigator = User::role('Investigator')->findOrFail($data['investigator_id']);
         $report       = Report::findOrFail($data['report_id']);
 
-        // Conflict of interest: cannot investigate a report you submitted.
+        // Conflict of interest: nobody investigates a report they submitted themselves.
         if ($report->user_id === $investigator->id) {
             return back()->withInput()->withErrors([
                 'investigator_id' => 'An investigator cannot handle a report they submitted.',
             ]);
         }
 
-        DB::transaction(function () use ($report, $investigator) {
-            Investigation::create([
-                'report_id'       => $report->id,
-                'investigator_id' => $investigator->id,
-            ]);
-            $report->update(['status' => 'assigned']);
-        });
+        $workflow->assign($report, $investigator, $request->user()); // checks "Under Review"
 
-        return redirect()->route('investigations.index')->with('success', 'Investigator assigned.');
+        return redirect()->route('reports.show', $report)->with('success', 'Investigator assigned.');
     }
 
     public function show(Investigation $investigation)
     {
-        $this->authorizeOwn($investigation);
+        $this->authorizeView($investigation);
 
-        $investigation->load(['report', 'investigator:id,name']);
+        $investigation->load(['report.department', 'investigator:id,name']);
 
         return view('investigations.show', compact('investigation'));
     }
 
-    public function edit(Investigation $investigation)
-    {
-        $this->authorizeOwn($investigation);
-
-        return view('investigations.edit', compact('investigation'));
-    }
-
+    /** BR-09: only the assigned investigator records findings and recommendations. */
     public function update(Request $request, Investigation $investigation)
     {
-        $this->authorizeOwn($investigation);
+        abort_unless($investigation->investigator_id === auth()->id(), 403);
 
         $investigation->update($request->validate([
             'findings'        => ['nullable', 'string', 'max:20000'],
             'recommendations' => ['nullable', 'string', 'max:20000'],
         ]));
 
+        AuditLogger::log('investigation.updated', $investigation->report);
+
         return back()->with('success', 'Investigation updated.');
     }
 
-    public function destroy(Investigation $investigation)
+    public function destroy(Investigation $investigation, ReportWorkflow $workflow)
     {
         $this->adminOnly();
 
-        DB::transaction(function () use ($investigation) {
-            $investigation->report()->update(['status' => 'under_review']);
-            $investigation->delete();
-        });
+        $workflow->unassign($investigation, auth()->user());
 
-        return back()->with('success', 'Assignment removed.');
+        return redirect()->route('investigations.index')->with('success', 'Assignment removed.');
     }
 
     private function scoped()
@@ -120,70 +108,8 @@ class InvestigationController extends Controller
         return $query;
     }
 
-    private function authorizeOwn(Investigation $investigation): void
+    private function authorizeView(Investigation $investigation): void
     {
         abort_unless($this->isAdmin() || $investigation->investigator_id === auth()->id(), 403);
     }
 }
-=======
-use Illuminate\Http\Request;
-
-class InvestigationController extends Controller
-{
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Investigation $investigation)
-    {
-        //
-    }
-}
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9

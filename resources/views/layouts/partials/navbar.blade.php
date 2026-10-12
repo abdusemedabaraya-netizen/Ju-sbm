@@ -11,11 +11,11 @@
           <i class="bi bi-list"></i>
         </a>
       </li>
-      <li class="nav-item d-none d-md-block">
+      {{-- <li class="nav-item d-none d-md-block">
         <a href="{{ url('/') }}" class="nav-link" target="_blank">
           <i class="bi bi-globe me-1" aria-hidden="true"></i> Public Portal
         </a>
-      </li>
+      </li> --}}
     </ul>
 
     <ul class="navbar-nav ms-auto">
@@ -72,12 +72,12 @@
       {{-- User menu --}}
       <li class="nav-item dropdown user-menu">
         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-person-circle fs-5 me-1"></i>
+          <x-avatar :user="$user" :size="28" class="me-1" />
           <span class="d-none d-md-inline">{{ $user->name }}</span>
         </a>
         <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
           <li class="user-header text-bg-primary">
-            <i class="bi bi-person-circle" style="font-size: 4rem"></i>
+            <x-avatar :user="$user" :size="90" :ring="true" />
             <p>
               {{ $user->name }}
               <small>{{ $user->getRoleNames()->first() ?? 'User' }}</small>
@@ -85,7 +85,7 @@
             </p>
           </li>
           <li class="user-footer">
-            <a href="{{ route('profile.edit') }}" class="btn btn-outline-secondary">Profile</a>
+            <a href="{{ route('profile.edit') }}" class="btn btn-primary">Profile</a>
             <form method="POST" action="{{ route('logout') }}" class="d-inline float-end">
               @csrf
               <button type="submit" class="btn btn-outline-danger">Sign out</button>

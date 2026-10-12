@@ -33,7 +33,8 @@ class TestDataSeeder extends Seeder
         // Departments
         $deptIds = [];
         foreach (['Registrar', 'Finance', 'Human Resources', 'Procurement', 'College of Engineering'] as $name) {
-            $deptIds[] = DB::table('departments')->insertGetId([
+            $dept = DB::table('departments')->where('name', $name)->first();
+            $deptIds[] = $dept->id ?? DB::table('departments')->insertGetId([
                 'name' => $name, 'created_at' => now(), 'updated_at' => now(),
             ]);
         }
@@ -43,8 +44,8 @@ class TestDataSeeder extends Seeder
         $priorities = ['low', 'medium', 'high', 'critical'];
 
         for ($i = 1; $i <= 30; $i++) {
-            DB::table('reports')->insert([
-                'tracking_number' => sprintf('JU-2026-%06d', $i),
+            $tracking = sprintf('JU-2026-%06d', $i);
+            $payload = [
                 'department_id'   => $deptIds[array_rand($deptIds)],
                 'category'        => $categories[array_rand($categories)],
                 'subject'         => 'Sample report number ' . $i,
@@ -54,7 +55,12 @@ class TestDataSeeder extends Seeder
                 'anonymous'       => (bool) rand(0, 1),
                 'created_at'      => now()->subDays(rand(0, 150)),
                 'updated_at'      => now(),
-            ]);
+            ];
+            if (DB::table('reports')->where('tracking_number', $tracking)->exists()) {
+                DB::table('reports')->where('tracking_number', $tracking)->update($payload);
+            } else {
+                DB::table('reports')->insert($payload + ['tracking_number' => $tracking]);
+            }
         }
     }
 }

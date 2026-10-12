@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-<<<<<<< HEAD
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Report extends Model
@@ -28,62 +27,4 @@ class Report extends Model
     public function investigation() { return $this->hasOne(Investigation::class); }
     public function evidences()     { return $this->hasMany(Evidence::class); }
     public function statusHistories() { return $this->hasMany(ReportStatusHistory::class)->latest(); }
-=======
-
-class Report extends Model
-{
-    protected $fillable = [
-        'tracking_number',
-        'user_id',
-        'department_id',
-        'subject',
-        'description',
-        'incident_date',
-        'location',
-        'category',
-        'priority',
-        'status',
-        'anonymous'
-    ];
-
-    protected $casts = [
-        'incident_date' => 'date',
-        'anonymous' => 'boolean'
-    ];
-
-    public function user()
-    {
-        return $this->belongsTo(
-            User::class
-        );
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(
-            Department::class
-        );
-    }
-
-    public function evidences()
-    {
-        return $this->hasMany(
-            Evidence::class
-        );
-    }
-
-    public function investigation()
-    {
-        return $this->hasOne(
-            Investigation::class
-        );
-    }
-
-    public function comments()
-    {
-        return $this->hasMany(
-            CaseComment::class
-        );
-    }
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9
 }

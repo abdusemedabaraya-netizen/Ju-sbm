@@ -9,24 +9,32 @@ use App\Models\User;
 use App\Notifications\NewReportSubmitted;
 use App\Notifications\ReportAssigned;
 use App\Notifications\ReportStatusChanged;
+use App\Notifications\ReportSubmittedConfirmation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Business rules BR-05, BR-06 and BR-07.
+ *
+ *   Submitted -> Under Review -> Assigned -> Investigating -> Resolved -> Closed
+ *                     \-> Rejected
+ *
+ * "Assigned" is reached only through assign() (Admin / Super Admin, status Under Review).
+ */
 class ReportWorkflow
 {
-    /** Manual status changes an Admin may make. Assignment is done through assign(). */
     public const TRANSITIONS = [
-        'submitted'     => ['under_review', 'rejected'],
-        'under_review'  => ['rejected'],
+        'submitted'     => ['under_review'],
+        'under_review'  => ['rejected'],      // or assign() -> assigned
         'assigned'      => ['investigating'],
         'investigating' => ['resolved'],
-        'resolved'      => ['closed', 'investigating'],
+        'resolved'      => ['closed'],        // admin approves the resolution
         'closed'        => [],
         'rejected'      => [],
     ];
 
-    /** The only moves an investigator may make on their own case. */
+    /** The only moves the assigned investigator may make. */
     private const INVESTIGATOR = [
         'assigned'      => ['investigating'],
         'investigating' => ['resolved'],
@@ -39,7 +47,11 @@ class ReportWorkflow
         }
 
         if ($user->hasAnyRole(['Admin', 'Super Admin'])) {
-            return self::TRANSITIONS[$report->status] ?? [];
+            // Admins review, reject and close. Investigation steps belong to the investigator.
+            return array_values(array_intersect(
+                self::TRANSITIONS[$report->status] ?? [],
+                ['under_review', 'rejected', 'closed']
+            ));
         }
 
         if ($user->hasRole('Investigator') && $report->investigation?->investigator_id === $user->id) {
@@ -80,20 +92,23 @@ class ReportWorkflow
         AuditLogger::log('report.priority_changed', $report, "{$old} -> {$priority}");
     }
 
+    /** BR-07: only while Under Review; the status then becomes Assigned. */
     public function assign(Report $report, User $investigator, User $actor): Investigation
     {
+        if ($report->status !== 'under_review') {
+            throw ValidationException::withMessages([
+                'report_id' => 'An investigator can only be assigned while the report is Under Review.',
+            ]);
+        }
+
         $investigation = DB::transaction(function () use ($report, $investigator, $actor) {
             $investigation = Investigation::create([
                 'report_id'       => $report->id,
                 'investigator_id' => $investigator->id,
             ]);
 
-            if (in_array($report->status, ['submitted', 'under_review'], true)) {
-                $from = $report->status;
-                $report->update(['status' => 'assigned']);
-                $this->record($report, $from, 'assigned', $actor->id, "Assigned to {$investigator->name}");
-            }
-
+            $report->update(['status' => 'assigned']);
+            $this->record($report, 'under_review', 'assigned', $actor->id, "Assigned to {$investigator->name}");
             AuditLogger::log('investigation.assigned', $report, "Investigator user #{$investigator->id}");
 
             return $investigation;
@@ -127,10 +142,14 @@ class ReportWorkflow
         AuditLogger::record('report.submitted', $report->user_id, $report, null, false);
     }
 
+    /** Admins are told about the new report; a registered reporter gets a confirmation. */
     public function notifyNewReport(Report $report): void
     {
-        $admins = User::role(['Admin', 'Super Admin'])->get();
-        $this->safeNotify($admins, new NewReportSubmitted($report));
+        $this->safeNotify(User::role(['Admin', 'Super Admin'])->get(), new NewReportSubmitted($report));
+
+        if ($report->user_id && $report->user) {
+            $this->safeNotify($report->user, new ReportSubmittedConfirmation($report));
+        }
     }
 
     private function record(Report $report, ?string $from, string $to, ?int $by, ?string $note): void

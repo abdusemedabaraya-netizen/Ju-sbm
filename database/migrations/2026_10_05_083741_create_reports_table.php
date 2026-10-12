@@ -13,23 +13,8 @@ return new class extends Migration
             $table->id();
 
             $table->string('tracking_number')->unique();
-<<<<<<< HEAD
-            $table->string('access_code_hash')->nullable();
-=======
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9
-
-            $table->foreignId('user_id')
-                ->nullable()
-                ->constrained()
-                ->nullOnDelete();
-
-<<<<<<< HEAD
-           $table->foreignId('department_id')->constrained()->restrictOnDelete();
-=======
-            $table->foreignId('department_id')
-                ->constrained()
-                ->cascadeOnDelete();
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9
+            $table->foreignId("user_id")->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('department_id')->constrained()->restrictOnDelete();
 
             $table->string('subject');
 

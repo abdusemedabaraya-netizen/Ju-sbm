@@ -1,33 +1,79 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
-<<<<<<< HEAD
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EvidenceController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\MyReportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SubmitReportController;
 use App\Http\Controllers\TrackController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-/* ---------- Public ---------- */
-Route::get('/', fn () => view('welcome'));
+/*
+|--------------------------------------------------------------------------
+| Public: landing page
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/', fn () => view('home.index'))->name('home');
+
+/*
+|--------------------------------------------------------------------------
+| Public: report submission (the real form)
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/report', [SubmitReportController::class, 'create'])->name('report.create');
+
 Route::post('/report', [SubmitReportController::class, 'store'])
-    ->middleware('throttle:5,1')->name('report.store');
+    ->middleware('throttle:5,1')
+    ->name('report.store');
+
 Route::get('/report/submitted', [SubmitReportController::class, 'submitted'])->name('report.submitted');
 
-Route::get('/track', [TrackController::class, 'index'])->name('track.index');
-Route::post('/track', [TrackController::class, 'search'])
-    ->middleware('throttle:10,1')->name('track.search');
+/*
+|--------------------------------------------------------------------------
+| Public: tracking (tracking number + access code)
+|--------------------------------------------------------------------------
+*/
 
-/* ---------- Breeze ---------- */
+Route::get('/track', [TrackController::class, 'index'])->name('track.index');
+
+Route::post('/track', [TrackController::class, 'search'])
+    ->middleware('throttle:10,1')
+    ->name('track.search');
+
+/*
+|--------------------------------------------------------------------------
+| Old landing-page links: same route names, now sent to the real pages
+|--------------------------------------------------------------------------
+*/
+
+Route::redirect('/report/create', '/report')->name('reports.create');
+Route::redirect('/report/anonymous', '/report')->name('reports.anonymous');
+Route::redirect('/report/track', '/track')->name('reports.track');
+
+Route::post('/report/track', [TrackController::class, 'search'])
+    ->middleware('throttle:10,1')
+    ->name('reports.track.search');
+
+/*
+|--------------------------------------------------------------------------
+| After login
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/dashboard', function () {
     if (auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Investigator'])) {
         return redirect()->route('admin.dashboard');
@@ -36,64 +82,20 @@ Route::get('/dashboard', function () {
     return redirect()->route('my.reports.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-/* ---------- Any logged-in user ---------- */
-=======
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
-
-Route::get('/', function () {
-   return view('home.index');
-})->name('home');
-
-
 /*
 |--------------------------------------------------------------------------
-| Public Report Routes
+| Any logged-in user: profile, my reports, notifications
 |--------------------------------------------------------------------------
 */
 
-Route::get('/report/create', function () {
-    return view('reports.create');
-})->name('reports.create');
-
-Route::get('/report/anonymous', function () {
-    return view('reports.anonymous');
-})->name('reports.anonymous');
-
-Route::get('/report/track', function () {
-    return view('reports.track');
-})->name('reports.track');
-
-
-
-/*
-|--------------------------------------------------------------------------
-| Breeze dashboard (redirects staff to the AdminLTE dashboard)
-|--------------------------------------------------------------------------
-*/
-Route::get('/dashboard', function () {
-    $user = auth()->user();
-
-    // Staff go to the AdminLTE dashboard
-    if ($user->hasAnyRole(['Super Admin', 'Admin', 'Investigator'])) {
-        return redirect()->route('admin.dashboard');
-    }
-
-    // Normal users keep the simple page for now
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-/*
-|--------------------------------------------------------------------------
-| Profile
-|--------------------------------------------------------------------------
-*/
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-<<<<<<< HEAD
+
+    Route::get('/profile/photo/{user}', [ProfilePhotoController::class, 'show'])->name('profile.photo');
+    Route::post('/profile/photo', [ProfilePhotoController::class, 'store'])->name('profile.photo.store');
+    Route::delete('/profile/photo', [ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
 
     Route::get('/my/reports', [MyReportController::class, 'index'])->name('my.reports.index');
     Route::get('/my/reports/{report}', [MyReportController::class, 'show'])->name('my.reports.show');
@@ -102,45 +104,70 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.readAll');
 });
 
-/* ---------- Staff: Admin, Super Admin, Investigator ---------- */
-Route::middleware(['auth', 'verified', 'role:Super Admin|Admin|Investigator'])
-    ->prefix('admin')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-
-        Route::resource('reports', ReportController::class)->only(['index', 'show', 'update', 'destroy']);
-        Route::post('reports/{report}/evidence', [EvidenceController::class, 'store'])->name('evidence.store');
-        Route::get('evidence/{evidence}/download', [EvidenceController::class, 'download'])->name('evidence.download');
-
-        Route::resource('investigations', InvestigationController::class)->except(['edit']);
-    });
-
-/* ---------- Admin and Super Admin ---------- */
-Route::middleware(['auth', 'verified', 'role:Super Admin|Admin'])
-    ->prefix('admin')->group(function () {
-        Route::resource('departments', DepartmentController::class)->except(['show']);
-        Route::resource('users', UserController::class)->only(['index', 'show']);
-    });
-
-/* ---------- Super Admin only ---------- */
-Route::middleware(['auth', 'verified', 'role:Super Admin'])
-    ->prefix('admin')->group(function () {
-        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
-    });
-
-require __DIR__.'/auth.php';
-=======
-});
-
 /*
 |--------------------------------------------------------------------------
-| Admin area (AdminLTE) - staff only
+| Staff: Admin, Super Admin, Investigator
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['auth', 'verified', 'role:Super Admin|Admin|Investigator'])
     ->prefix('admin')
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+        Route::resource('reports', ReportController::class)
+            ->only(['index', 'show', 'update', 'destroy']);
+
+        Route::post('reports/{report}/evidence', [EvidenceController::class, 'store'])->name('evidence.store');
+        Route::get('evidence/{evidence}/download', [EvidenceController::class, 'download'])->name('evidence.download');
+
+        Route::resource('investigations', InvestigationController::class)
+            ->except(['edit']);
     });
 
+/*
+|--------------------------------------------------------------------------
+| Admin and Super Admin
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:Super Admin|Admin'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+
+        Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
+        Route::get('exports/csv', [ExportController::class, 'csv'])->name('exports.csv');
+        Route::get('exports/print', [ExportController::class, 'print'])->name('exports.print');
+
+        Route::resource('departments', DepartmentController::class)->except(['show']);
+        Route::resource('categories', CategoryController::class)->except(['show']);
+        Route::resource('users', UserController::class)->only(['index', 'show']);
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Super Admin only
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:Super Admin'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::post('roles/staff', [RoleController::class, 'storeStaff'])->name('roles.staff.store');
+        Route::patch('roles/users/{user}', [RoleController::class, 'assign'])->name('roles.assign');
+
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+
+        Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Authentication (Breeze)
+|--------------------------------------------------------------------------
+*/
+
 require __DIR__.'/auth.php';
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9

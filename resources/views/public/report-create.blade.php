@@ -35,10 +35,8 @@
             <label class="form-label" for="category">Type of concern *</label>
             <select id="category" name="category" class="form-select @error('category') is-invalid @enderror" required>
               <option value="">Select…</option>
-              @foreach (['bribery' => 'Bribery', 'fraud' => 'Fraud', 'abuse_of_power' => 'Abuse of power',
-                         'nepotism' => 'Nepotism / favoritism', 'resource_misuse' => 'Misuse of resources',
-                         'harassment' => 'Harassment', 'other' => 'Other'] as $value => $label)
-                <option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>
+              @foreach ($categories as $c)
+                <option value="{{ $c->slug }}" @selected(old('category') === $c->slug)>{{ $c->name }}</option>
               @endforeach
             </select>
             @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -86,7 +84,7 @@
             <label class="form-label" for="files">Evidence (optional)</label>
             <input type="file" id="files" name="files[]" multiple accept=".pdf,.docx,.jpg,.jpeg,.png,.mp4"
                    class="form-control @error('files') is-invalid @enderror @error('files.*') is-invalid @enderror">
-            <div class="form-text">PDF, DOCX, JPG, PNG or MP4. Up to {{ config('jiacrs.max_files') }} files, 20 MB each.</div>
+            <div class="form-text">PDF, DOCX, JPG, PNG or MP4. Up to {{ config('jiacrs.max_files') }} files, {{ intdiv(config('jiacrs.max_file_kb'), 1024) }} MB each.</div>
             @error('files')<div class="invalid-feedback">{{ $message }}</div>@enderror
             @error('files.*')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <div class="alert alert-warning mt-2 mb-0 py-2 small">

@@ -11,7 +11,7 @@ class MyReportController extends Controller
         // Anonymous reports have no user_id, so they can never appear here.
         $reports = Report::where('user_id', auth()->id())->latest()->paginate(10);
 
-        return view('my-reports.index', compact('reports'));
+        return view('reporter.index', compact('reports'));
     }
 
     public function show(Report $report)
@@ -20,6 +20,6 @@ class MyReportController extends Controller
 
         $report->load('department', 'statusHistories');
 
-        return view('my-reports.show', compact('report'));
+       return view('reporter.show', compact('report'));
     }
 }

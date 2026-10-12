@@ -43,7 +43,7 @@
           </div>
           <div class="col-sm-6">
             <ol class="breadcrumb float-sm-end">
-              <li class="breadcrumb-item"><a href="{{ url('/admin/dashboard') }}">Home</a></li>
+              <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
               @yield('breadcrumb')
             </ol>
           </div>

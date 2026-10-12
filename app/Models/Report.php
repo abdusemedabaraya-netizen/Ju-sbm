@@ -3,37 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-<<<<<<< HEAD
-use Illuminate\Database\Eloquent\SoftDeletes;
-
-class Report extends Model
-{
-    use SoftDeletes;
-
-    protected $fillable = [
-        'tracking_number', 'access_code_hash', 'user_id', 'department_id',
-        'subject', 'description', 'incident_date', 'location',
-        'category', 'priority', 'status', 'anonymous',
-    ];
-
-    protected $hidden = ['access_code_hash'];
-
-    protected function casts(): array
-    {
-        return ['incident_date' => 'date', 'anonymous' => 'boolean'];
-    }
-
-    public function department()    { return $this->belongsTo(Department::class); }
-    public function user()          { return $this->belongsTo(User::class); }
-    public function investigation() { return $this->hasOne(Investigation::class); }
-    public function evidences()     { return $this->hasMany(Evidence::class); }
-    public function statusHistories() { return $this->hasMany(ReportStatusHistory::class)->latest(); }
-=======
 
 class Report extends Model
 {
     protected $fillable = [
         'tracking_number',
+        'access_code_hash',
         'user_id',
         'department_id',
         'subject',
@@ -43,7 +18,11 @@ class Report extends Model
         'category',
         'priority',
         'status',
-        'anonymous'
+        'anonymous',
+    ];
+
+    protected $hidden = [
+        'access_code_hash',
     ];
 
     protected $casts = [
@@ -53,37 +32,31 @@ class Report extends Model
 
     public function user()
     {
-        return $this->belongsTo(
-            User::class
-        );
+        return $this->belongsTo(User::class);
     }
 
     public function department()
     {
-        return $this->belongsTo(
-            Department::class
-        );
+        return $this->belongsTo(Department::class);
     }
 
     public function evidences()
     {
-        return $this->hasMany(
-            Evidence::class
-        );
+        return $this->hasMany(Evidence::class);
     }
 
     public function investigation()
     {
-        return $this->hasOne(
-            Investigation::class
-        );
+        return $this->hasOne(Investigation::class);
     }
 
     public function comments()
     {
-        return $this->hasMany(
-            CaseComment::class
-        );
+        return $this->hasMany(CaseComment::class);
     }
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9
+
+    public function statusHistory()
+    {
+        return $this->hasMany(ReportStatusHistory::class);
+    }
 }

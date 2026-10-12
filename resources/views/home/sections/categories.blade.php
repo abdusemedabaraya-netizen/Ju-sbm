@@ -15,9 +15,12 @@
                 ['slug' => 'ethical-misconduct',   'title' => 'Ethical Misconduct',   'icon' => 'bi-bank',               'color' => 'green'],
                 ['slug' => 'other',                'title' => 'Other Concerns',       'icon' => 'bi-three-dots',         'color' => 'blue'],
             ] as $cat)
-                <div class="col-6 col-lg-3">
-                    <a href="{{ route('reports.create', ['category' => $cat['slug']]) }}"
-                       class="card jiacrs-category h-100 shadow-sm">
+                 <div class="col-6 col-lg-3">
+                    <a href="#"
+                       class="card jiacrs-category h-100 shadow-sm"
+                       data-bs-toggle="modal"
+                       data-bs-target="#reportTypeModal"
+                       data-category="{{ $cat['slug'] }}">
                         <span class="jiacrs-category-icon is-{{ $cat['color'] }}"><i class="bi {{ $cat['icon'] }}"></i></span>
                         <span class="jiacrs-category-name">{{ $cat['title'] }}</span>
                         <i class="bi bi-arrow-right jiacrs-category-arrow"></i>

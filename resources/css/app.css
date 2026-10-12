@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-=======
+
 /* =========================================================
    JIACRS PUBLIC LANDING PAGE
    Loaded after AdminLTE 4 / Bootstrap 5, so these rules win.
@@ -1369,4 +1365,3 @@ section[id], div[id="track"] { scroll-margin-top: 80px; }
 .jiacrs-delete-confirm-btn:hover {
     background: #b02a37;
 }
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9

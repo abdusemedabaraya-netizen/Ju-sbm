@@ -38,7 +38,7 @@
               @foreach (['bribery' => 'Bribery', 'fraud' => 'Fraud', 'abuse_of_power' => 'Abuse of power',
                          'nepotism' => 'Nepotism / favoritism', 'resource_misuse' => 'Misuse of resources',
                          'harassment' => 'Harassment', 'other' => 'Other'] as $value => $label)
-                <option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>
+               <option value="{{ $value }}" @selected(old('category', $selectedCategory) === $value)>{{ $label }}</option>
               @endforeach
             </select>
             @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -97,16 +97,29 @@
           </div>
 
           @auth
-            <div class="col-12">
-              <div class="form-check">
+    @if ($identified)
+        <div class="col-12">
+            <div class="alert alert-primary d-flex align-items-start gap-2 mb-0">
+                <i class="bi bi-person-check fs-5"></i>
+                <div>
+                    <strong>Submitting with your identity.</strong><br>
+                    This report is linked to your account (<strong>{{ auth()->user()->email }}</strong>),
+                    so our officers can contact you for more information if needed.
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="col-12">
+            <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="anonymous" name="anonymous" value="1"
                        @checked(old('anonymous', true))>
                 <label class="form-check-label" for="anonymous">
-                  Submit anonymously (this report will <strong>not</strong> be linked to my account)
+                    Submit anonymously (this report will <strong>not</strong> be linked to my account)
                 </label>
               </div>
-            </div>
-          @endauth
+        </div>
+    @endif
+@endauth
         </div>
 
         <div class="d-grid d-md-flex justify-content-md-end mt-4">

@@ -1,6 +1,6 @@
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
   <div class="sidebar-brand">
-    <a href="{{ url('/admin/dashboard') }}" class="brand-link">
+    <a href="{{ route('dashboard') }}" class="brand-link">
       {{-- Put your logo at public/images/ju-logo.png (optional) --}}
       {{-- <img src="{{ asset('images/ju-logo.png') }}" alt="JU Logo" class="brand-image opacity-75 shadow"> --}}
       <i class="bi bi-shield-check brand-image fs-3 text-white"></i>
@@ -11,9 +11,12 @@
   <div class="sidebar-wrapper">
     <nav class="mt-2" aria-label="Main navigation">
       <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation">
-
-        <li class="nav-item">
-          <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
+       <li class="nav-item">
+          @hasanyrole('Super Admin|Admin|Investigator')
+            <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
+          @else
+            <a href="{{ route('reporter.dashboard') }}" class="nav-link {{ request()->is('my/dashboard') ? 'active' : '' }}">
+          @endhasanyrole
             <i class="nav-icon bi bi-speedometer"></i><p>Dashboard</p>
           </a>
         </li>
@@ -50,7 +53,7 @@
 
           @role('Investigator')
             <li class="nav-item">
-              <a href="{{ url('/admin/my-cases') }}" class="nav-link {{ request()->is('admin/my-cases*') ? 'active' : '' }}">
+             <a href="{{ route('investigations.mine') }}" class="nav-link {{ request()->is('admin/my-cases*') ? 'active' : '' }}">
                 <i class="nav-icon bi bi-folder2-open"></i><p>My Assigned Cases</p>
               </a>
             </li>
@@ -113,23 +116,28 @@
           </li>
         @endrole
 
-        {{-- ===== Registered users (reporters) ===== --}}
+        {{-- ===== Reporter (logged-in university staff) ===== --}}
         @role('User')
           <li class="nav-header">MY ACCOUNT</li>
           <li class="nav-item">
-            <a href="{{ url('/my/reports/create') }}" class="nav-link">
+            <a href="{{ route('reporter.dashboard') }}" class="nav-link {{ request()->is('my/dashboard') ? 'active' : '' }}">
+              <i class="nav-icon bi bi-speedometer"></i><p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('report.create.identified') }}" class="nav-link">
               <i class="nav-icon bi bi-plus-circle"></i><p>Submit Report</p>
             </a>
           </li>
           <li class="nav-item">
-            <a href="{{ url('/my/reports') }}" class="nav-link {{ request()->is('my/reports') ? 'active' : '' }}">
+            <a href="{{ route('my.reports.index') }}" class="nav-link {{ request()->is('my/reports*') ? 'active' : '' }}">
               <i class="nav-icon bi bi-file-earmark-text"></i><p>My Reports</p>
             </a>
           </li>
           <li class="nav-item">
-            <a href="{{ route('profile.edit') }}" class="nav-link">
+            <!-- <a href="{{ route('profile.edit') }}" class="nav-link">
               <i class="nav-icon bi bi-person"></i><p>Profile</p>
-            </a>
+            </a> -->
           </li>
         @endrole
       </ul>

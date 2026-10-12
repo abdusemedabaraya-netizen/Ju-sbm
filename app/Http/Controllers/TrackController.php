@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-
+use App\Models\ReportStatusHistory;
 class TrackController extends Controller
 {
     public function index()
@@ -31,8 +31,13 @@ class TrackController extends Controller
         }
 
         // Pass only what the reporter may see.
-        return view('public.track-result', [
-            'report' => $report->only(['tracking_number', 'category', 'status', 'created_at', 'updated_at']),
-        ]);
+$history = ReportStatusHistory::where('report_id', $report->id)
+    ->orderBy('id')
+    ->get();
+
+return view('public.track-result', [
+    'report'  => $report->only(['tracking_number', 'category', 'status', 'created_at', 'updated_at']),
+    'history' => $history,
+]);
     }
 }

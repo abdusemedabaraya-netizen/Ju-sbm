@@ -8,19 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('report_status_histories', function (Blueprint $table) {
+        Schema::create('report_status_history', function (Blueprint $table) {
             $table->id();
             $table->foreignId('report_id')->constrained()->cascadeOnDelete();
-            $table->string('from_status', 30)->nullable();
-            $table->string('to_status', 30);
+            $table->string('from_status')->nullable();
+            $table->string('to_status');
             $table->foreignId('changed_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->text('note')->nullable();   // internal only, never shown to reporters
+            $table->string('note')->nullable();
             $table->timestamp('created_at')->useCurrent();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('report_status_histories');
+        Schema::dropIfExists('report_status_history');
     }
 };

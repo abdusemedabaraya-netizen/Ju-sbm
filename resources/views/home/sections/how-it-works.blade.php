@@ -30,9 +30,9 @@
         </div>
 
         <div class="text-center mt-4">
-            <a href="{{ route('reports.create') }}" class="btn btn-primary btn-lg">
+            <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#reportTypeModal">
                 <i class="bi bi-send-fill me-2"></i>Start a Report
-            </a>
+            </button>
         </div>
 
     </div>

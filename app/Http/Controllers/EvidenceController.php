@@ -3,63 +3,52 @@
 namespace App\Http\Controllers;
 
 use App\Models\Evidence;
+use App\Models\Report;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EvidenceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function store(Request $request, Report $report)
     {
-        //
+        $this->authorizeReport($report);
+
+        $data = $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip',
+                'max:10240', // 10 MB
+            ],
+        ]);
+
+        $file = $data['file'];
+
+        Evidence::create([
+            'report_id' => $report->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $file->store('evidence', 'public'),
+            'file_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        return back()->with('success', 'Evidence attached to the case.');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function download(Evidence $evidence)
     {
-        //
+        $this->authorizeReport($evidence->report);
+
+        return Storage::disk('public')->download($evidence->file_path, $evidence->file_name);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    private function authorizeReport(Report $report): void
     {
-        //
-    }
+        $user = auth()->user();
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Evidence $evidence)
-    {
-        //
-    }
+        $allowed = $user->hasAnyRole(['Admin', 'Super Admin'])
+            || ($user->hasRole('Investigator') && $report->investigation?->investigator_id === $user->id);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Evidence $evidence)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Evidence $evidence)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Evidence $evidence)
-    {
-        //
+        abort_unless($allowed, 403);
     }
 }

@@ -11,11 +11,11 @@
           <i class="bi bi-list"></i>
         </a>
       </li>
-      <li class="nav-item d-none d-md-block">
+      <!-- <li class="nav-item d-none d-md-block">
         <a href="{{ url('/') }}" class="nav-link" target="_blank">
           <i class="bi bi-globe me-1" aria-hidden="true"></i> Public Portal
         </a>
-      </li>
+      </li> -->
     </ul>
 
     <ul class="navbar-nav ms-auto">
@@ -40,7 +40,7 @@
             <span class="dropdown-item text-secondary">No new notifications</span>
           @endforelse
           <div class="dropdown-divider"></div>
-          <a href="{{ url('/admin/notifications') }}" class="dropdown-item dropdown-footer">See All Notifications</a>
+         <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer">See All Notifications</a>
         </div>
       </li>
 

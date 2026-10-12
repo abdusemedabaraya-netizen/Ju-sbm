@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Investigation;
-<<<<<<< HEAD
 use App\Models\Report;
 use App\Models\User;
+use App\Services\ReportWorkflow;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class InvestigationController extends Controller
@@ -19,7 +18,7 @@ class InvestigationController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('investigations.index', compact('investigations'));
+        return view('cases.index', compact('investigations'));
     }
 
     public function create()
@@ -32,7 +31,7 @@ class InvestigationController extends Controller
 
         $investigators = User::role('Investigator')->get(['id', 'name']);
 
-        return view('investigations.create', compact('reports', 'investigators'));
+        return view('cases.create', compact('reports', 'investigators'));
     }
 
     public function store(Request $request)
@@ -58,13 +57,7 @@ class InvestigationController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($report, $investigator) {
-            Investigation::create([
-                'report_id'       => $report->id,
-                'investigator_id' => $investigator->id,
-            ]);
-            $report->update(['status' => 'assigned']);
-        });
+        app(ReportWorkflow::class)->assign($report, $investigator, auth()->user());
 
         return redirect()->route('investigations.index')->with('success', 'Investigator assigned.');
     }
@@ -75,14 +68,14 @@ class InvestigationController extends Controller
 
         $investigation->load(['report', 'investigator:id,name']);
 
-        return view('investigations.show', compact('investigation'));
+        return view('cases.show', compact('investigation'));
     }
 
     public function edit(Investigation $investigation)
     {
         $this->authorizeOwn($investigation);
 
-        return view('investigations.edit', compact('investigation'));
+        return view('cases.edit', compact('investigation'));
     }
 
     public function update(Request $request, Investigation $investigation)
@@ -91,7 +84,7 @@ class InvestigationController extends Controller
 
         $investigation->update($request->validate([
             'findings'        => ['nullable', 'string', 'max:20000'],
-            'recommendations' => ['nullable', 'string', 'max:20000'],
+            'recommendation'  => ['nullable', 'string', 'max:20000'],
         ]));
 
         return back()->with('success', 'Investigation updated.');
@@ -101,12 +94,37 @@ class InvestigationController extends Controller
     {
         $this->adminOnly();
 
-        DB::transaction(function () use ($investigation) {
-            $investigation->report()->update(['status' => 'under_review']);
-            $investigation->delete();
-        });
+        app(ReportWorkflow::class)->unassign($investigation, auth()->user());
 
         return back()->with('success', 'Assignment removed.');
+    }
+
+    public function switchStatus(Request $request, Investigation $investigation)
+    {
+        $this->authorizeOwn($investigation);
+
+        $report = $investigation->report;
+        $move   = $request->input('move');
+
+        $to = match ($move) {
+            'start'   => 'investigating',
+            'resolve' => 'resolved',
+            default   => abort(422),
+        };
+
+        abort_unless(
+            in_array($to, ReportWorkflow::allowedNext($report, auth()->user()), true),
+            403
+        );
+
+        app(ReportWorkflow::class)->changeStatus($report, $to, auth()->user());
+
+        $investigation->update(match ($to) {
+            'investigating' => ['status' => 'ongoing'],
+            'resolved'      => ['status' => 'completed', 'investigation_date' => now()->toDateString()],
+        });
+
+        return back()->with('success', 'Report status updated to ' . ucfirst($to) . '.');
     }
 
     private function scoped()
@@ -125,65 +143,4 @@ class InvestigationController extends Controller
         abort_unless($this->isAdmin() || $investigation->investigator_id === auth()->id(), 403);
     }
 }
-=======
-use Illuminate\Http\Request;
 
-class InvestigationController extends Controller
-{
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Investigation $investigation)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Investigation $investigation)
-    {
-        //
-    }
-}
->>>>>>> be38a6dd75183943501997739ad1d99c484cc4e9

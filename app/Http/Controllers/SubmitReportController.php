@@ -19,11 +19,6 @@ class SubmitReportController extends Controller
 {
     public function create()
     {
-<<<<<<< HEAD
-        $departments = Department::orderBy('name')->get(['id', 'name']);
-        $categories = Category::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['slug', 'name']);
-
-=======
         SiteSettings::applyToConfig();
         if (! config('jiacrs.public_reporting_enabled')) {
             return view('public.report-closed');
@@ -32,7 +27,6 @@ class SubmitReportController extends Controller
         $departments = Department::orderBy('name')->get(['id', 'name']);
         $categories  = Category::active()->orderBy('sort_order')->get(['id', 'slug', 'name']);
 
->>>>>>> 4ee7626 (updated)
         return view('public.report-create', compact('departments', 'categories'));
     }
 

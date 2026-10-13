@@ -31,8 +31,11 @@ class DashboardController extends Controller
 
         // Last 6 months (zero-filled)
         $from = Carbon::now()->startOfMonth()->subMonths(5);
+        $ymExpr = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', created_at) as ym"
+            : "DATE_FORMAT(created_at, '%Y-%m') as ym";
         $counts = $base()->where('created_at', '>=', $from)
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as total")
+            ->selectRaw("$ymExpr, COUNT(*) as total")
             ->groupBy('ym')->pluck('total', 'ym');
 
         $labels = $data = [];

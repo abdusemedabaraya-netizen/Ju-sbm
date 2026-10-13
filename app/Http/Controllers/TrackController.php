@@ -25,7 +25,7 @@ class TrackController extends Controller
         // Same message for "not found" and "wrong code" so nobody can probe numbers.
         if (! $report
             || ! $report->access_code_hash
-            || ! Hash::check(strtoupper(trim($data['access_code'])), $report->access_code_hash)) {
+            || ! Hash::check($this->normalizeAccessCode($data['access_code']), $report->access_code_hash)) {
             return back()->withInput($request->only('tracking_number'))
                 ->withErrors(['tracking_number' => 'No report matches that tracking number and access code.']);
         }
@@ -33,6 +33,16 @@ class TrackController extends Controller
         // Pass only what the reporter may see.
         return view('public.track-result', [
             'report' => $report->only(['tracking_number', 'category', 'status', 'created_at', 'updated_at']),
+            'history' => $report->statusHistories()->get(['to_status', 'created_at']),
         ]);
+    }
+
+    /**
+     * Access codes are shown grouped for readability (e.g. "ESREK-DR8O1").
+     * Strip separators and normalise casing before comparing against the hash.
+     */
+    private function normalizeAccessCode(string $code): string
+    {
+        return strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $code));
     }
 }

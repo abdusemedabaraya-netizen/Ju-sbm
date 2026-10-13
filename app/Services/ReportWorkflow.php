@@ -47,11 +47,8 @@ class ReportWorkflow
         }
 
         if ($user->hasAnyRole(['Admin', 'Super Admin'])) {
-            // Admins review, reject and close. Investigation steps belong to the investigator.
-            return array_values(array_intersect(
-                self::TRANSITIONS[$report->status] ?? [],
-                ['under_review', 'rejected', 'closed']
-            ));
+            // Admins can move to available transitions in general
+            return self::TRANSITIONS[$report->status] ?? [];
         }
 
         if ($user->hasRole('Investigator') && $report->investigation?->investigator_id === $user->id) {

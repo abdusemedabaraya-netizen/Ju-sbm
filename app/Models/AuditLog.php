@@ -9,8 +9,10 @@ class AuditLog extends Model
     protected $fillable = [
         'user_id',
         'action',
+        'subject_type',
+        'subject_id',
         'description',
-        'ip_address'
+        'ip_address',
     ];
 
     public function user()
@@ -18,5 +20,10 @@ class AuditLog extends Model
         return $this->belongsTo(
             User::class
         );
+    }
+
+    public function subject()
+    {
+        return $this->morphTo();
     }
 }

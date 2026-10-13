@@ -40,7 +40,7 @@
             <span class="dropdown-item text-secondary">No new notifications</span>
           @endforelse
           <div class="dropdown-divider"></div>
-          <a href="{{ url('/admin/notifications') }}" class="dropdown-item dropdown-footer">See All Notifications</a>
+          <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer">See All Notifications</a>
         </div>
       </li>
 

@@ -1,6 +1,11 @@
+@php
+  $isStaff = auth()->user()?->hasAnyRole(['Super Admin', 'Admin', 'Investigator']) ?? false;
+  $dashboardUrl = $isStaff ? route('admin.dashboard') : route('dashboard');
+  $dashboardRouteName = $isStaff ? 'admin.dashboard' : 'dashboard';
+@endphp
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
   <div class="sidebar-brand">
-    <a href="{{ url('/admin/dashboard') }}" class="brand-link">
+    <a href="{{ $dashboardUrl }}" class="brand-link">
       {{-- Put your logo at public/images/ju-logo.png (optional) --}}
       {{-- <img src="{{ asset('images/ju-logo.png') }}" alt="JU Logo" class="brand-image opacity-75 shadow"> --}}
       <i class="bi bi-shield-check brand-image fs-3 text-white"></i>
@@ -13,53 +18,147 @@
       <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation">
 
         <li class="nav-item">
-          <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
+          <a href="{{ $dashboardUrl }}" class="nav-link {{ request()->routeIs($dashboardRouteName) ? 'active' : '' }}">
             <i class="nav-icon bi bi-speedometer"></i><p>Dashboard</p>
           </a>
         </li>
 
         {{-- ===== Case handling ===== --}}
         @hasanyrole('Super Admin|Admin|Investigator')
-          <li class="nav-header">CASE MANAGEMENT</li>
+          @php
+            $q = request();
+            $onReportsList = $q->routeIs('reports.index');
+            $onReports = $onReportsList || $q->routeIs('reports.show');
+            $view = $q->query('view');
+            $status = $q->query('status');
+            $priority = $q->query('priority');
+            $hasExtraFilters = $q->filled('search') || $q->filled('department_id')
+              || $q->filled('category') || $q->filled('date_from') || $q->filled('date_to');
+            $activeNew         = $onReportsList && ($view === 'new' || $status === 'submitted');
+            $activeUnderReview = $onReportsList && ($view === 'under_review' || $status === 'under_review');
+            $activeInProgress  = $onReportsList && ($view === 'in_progress' || in_array($status, ['assigned', 'investigating'], true));
+            $activeHighRisk    = $onReportsList && ($view === 'high_risk' || $priority === 'high');
+            $activeResolved    = $onReportsList && ($view === 'resolved_closed' || in_array($status, ['resolved', 'closed'], true));
+            $activeRejected    = $onReportsList && ($view === 'rejected' || $status === 'rejected');
+            $activeAll         = $onReportsList && ! $view && ! $status && ! $priority && ! $hasExtraFilters;
+          @endphp
 
-          <li class="nav-item {{ request()->is('admin/reports*') ? 'menu-open' : '' }}">
-            <a href="#" class="nav-link {{ request()->is('admin/reports*') ? 'active' : '' }}">
+          <li class="nav-header">REPORTS</li>
+
+          {{-- Parent opens automatically when a child (index or show) is active. --}}
+          <li class="nav-item {{ $onReports ? 'menu-open' : '' }}">
+            <a href="#" class="nav-link {{ $onReports ? 'active' : '' }}">
               <i class="nav-icon bi bi-file-earmark-text"></i>
               <p>Reports <i class="nav-arrow bi bi-chevron-right"></i></p>
             </a>
             <ul class="nav nav-treeview">
               <li class="nav-item">
-                <a href="{{ url('/admin/reports') }}" class="nav-link {{ request()->is('admin/reports') ? 'active' : '' }}">
-                  <i class="nav-icon bi bi-circle"></i><p>All Reports</p>
+                <a href="{{ route('reports.index') }}" class="nav-link {{ $activeAll ? 'active' : '' }}">
+                  <i class="nav-icon bi bi-circle"></i>
+                  <p>All Reports <span class="badge text-bg-secondary ms-1">{{ $reportCounts['all'] ?? 0 }}</span></p>
                 </a>
               </li>
+
               @hasanyrole('Super Admin|Admin')
                 <li class="nav-item">
-                  <a href="{{ url('/admin/reports?status=submitted') }}" class="nav-link">
-                    <i class="nav-icon bi bi-circle"></i><p>New / Unassigned</p>
+                  <a href="{{ route('reports.index', ['view' => 'new']) }}" class="nav-link {{ $activeNew ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-circle"></i>
+                    <p>New <span class="badge text-bg-warning ms-1">{{ $reportCounts['new'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{{ route('reports.index', ['view' => 'under_review']) }}" class="nav-link {{ $activeUnderReview ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-circle"></i>
+                    <p>Under Review <span class="badge text-bg-info ms-1">{{ $reportCounts['under_review'] ?? 0 }}</span></p>
                   </a>
                 </li>
               @endhasanyrole
+
               <li class="nav-item">
-                <a href="{{ url('/admin/reports?priority=high') }}" class="nav-link">
-                  <i class="nav-icon bi bi-circle"></i><p>High Risk</p>
+                <a href="{{ route('reports.index', ['view' => 'in_progress']) }}" class="nav-link {{ $activeInProgress ? 'active' : '' }}">
+                  <i class="nav-icon bi bi-circle"></i>
+                  <p>In Progress <span class="badge text-bg-primary ms-1">{{ $reportCounts['in_progress'] ?? 0 }}</span></p>
                 </a>
               </li>
+
+              @hasanyrole('Super Admin|Admin')
+                <li class="nav-item">
+                  <a href="{{ route('reports.index', ['view' => 'high_risk']) }}" class="nav-link {{ $activeHighRisk ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-circle"></i>
+                    <p>High Risk <span class="badge text-bg-danger ms-1">{{ $reportCounts['high_risk'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+              @endhasanyrole
+
+              <li class="nav-item">
+                <a href="{{ route('reports.index', ['view' => 'resolved_closed']) }}" class="nav-link {{ $activeResolved ? 'active' : '' }}">
+                  <i class="nav-icon bi bi-circle"></i>
+                  <p>Resolved &amp; Closed <span class="badge text-bg-success ms-1">{{ $reportCounts['resolved_closed'] ?? 0 }}</span></p>
+                </a>
+              </li>
+
+              @hasanyrole('Super Admin|Admin')
+                <li class="nav-item">
+                  <a href="{{ route('reports.index', ['view' => 'rejected']) }}" class="nav-link {{ $activeRejected ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-circle"></i>
+                    <p>Rejected <span class="badge text-bg-danger ms-1">{{ $reportCounts['rejected'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+              @endhasanyrole
             </ul>
           </li>
 
-          @role('Investigator')
-            <li class="nav-item">
-              <a href="{{ url('/admin/my-cases') }}" class="nav-link {{ request()->is('admin/my-cases*') ? 'active' : '' }}">
-                <i class="nav-icon bi bi-folder2-open"></i><p>My Assigned Cases</p>
-              </a>
-            </li>
-          @endrole
+          @php
+            $onCases = request()->routeIs('investigations.index')
+              || request()->routeIs('investigations.show')
+              || request()->routeIs('investigations.create');
+            $caseTab = request()->query('tab', 'active');
+            $onCaseActive = request()->routeIs('investigations.index') && $caseTab !== 'completed';
+            $onCaseCompleted = request()->routeIs('investigations.index') && $caseTab === 'completed';
+          @endphp
 
-          <li class="nav-item">
-            <a href="{{ url('/admin/investigations') }}" class="nav-link {{ request()->is('admin/investigations*') ? 'active' : '' }}">
-              <i class="nav-icon bi bi-search"></i><p>Investigations</p>
+          <li class="nav-item {{ $onCases ? 'menu-open' : '' }}">
+            <a href="#" class="nav-link {{ $onCases ? 'active' : '' }}">
+              <i class="nav-icon bi bi-search"></i>
+              <p>Investigations <i class="nav-arrow bi bi-chevron-right"></i></p>
             </a>
+            <ul class="nav nav-treeview">
+              @hasanyrole('Super Admin|Admin')
+                <li class="nav-item">
+                  <a href="{{ route('investigations.index') }}" class="nav-link {{ $onCaseActive ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-circle"></i>
+                    <p>All Investigations <span class="badge text-bg-secondary ms-1">{{ $caseCounts['total'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{{ route('investigations.create') }}" class="nav-link {{ request()->routeIs('investigations.create') ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-person-plus"></i>
+                    <p>Assign Investigator <span class="badge text-bg-warning ms-1">{{ $caseCounts['unassigned'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{{ route('investigations.index', ['tab' => 'completed']) }}" class="nav-link {{ $onCaseCompleted ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-check2-circle"></i>
+                    <p>Completed <span class="badge text-bg-success ms-1">{{ $caseCounts['completed'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+              @endhasanyrole
+
+              @role('Investigator')
+                <li class="nav-item">
+                  <a href="{{ route('investigations.index') }}" class="nav-link {{ $onCaseActive ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-folder2-open"></i>
+                    <p>My Assigned Cases <span class="badge text-bg-primary ms-1">{{ $caseCounts['active'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{{ route('investigations.index', ['tab' => 'completed']) }}" class="nav-link {{ $onCaseCompleted ? 'active' : '' }}">
+                    <i class="nav-icon bi bi-check2-circle"></i>
+                    <p>Completed <span class="badge text-bg-success ms-1">{{ $caseCounts['completed'] ?? 0 }}</span></p>
+                  </a>
+                </li>
+              @endrole
+            </ul>
           </li>
         @endhasanyrole
 
@@ -117,7 +216,7 @@
         @role('User')
           <li class="nav-header">MY ACCOUNT</li>
           <li class="nav-item">
-            <a href="{{ url('/my/reports/create') }}" class="nav-link">
+            <a href="{{ route('report.create') }}" class="nav-link {{ request()->routeIs('report.create') ? 'active' : '' }}">
               <i class="nav-icon bi bi-plus-circle"></i><p>Submit Report</p>
             </a>
           </li>

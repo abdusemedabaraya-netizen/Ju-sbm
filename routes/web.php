@@ -118,11 +118,21 @@ Route::middleware(['auth', 'verified', 'role:Super Admin|Admin|Investigator'])
         Route::resource('reports', ReportController::class)
             ->only(['index', 'show', 'update', 'destroy']);
 
+        // BR-07: assign an investigator from the report page (Admin / Super Admin,
+        // only while Under Review). Existing route names stay intact.
+        Route::post('reports/{report}/assign', [ReportController::class, 'assign'])->name('reports.assign');
+
         Route::post('reports/{report}/evidence', [EvidenceController::class, 'store'])->name('evidence.store');
         Route::get('evidence/{evidence}/download', [EvidenceController::class, 'download'])->name('evidence.download');
 
         Route::resource('investigations', InvestigationController::class)
             ->except(['edit']);
+
+        // Case workspace transitions and internal notes (existing route names kept).
+        Route::post('investigations/{investigation}/start', [InvestigationController::class, 'start'])->name('investigations.start');
+        Route::post('investigations/{investigation}/resolve', [InvestigationController::class, 'resolve'])->name('investigations.resolve');
+        Route::post('investigations/{investigation}/close', [InvestigationController::class, 'close'])->name('investigations.close');
+        Route::post('investigations/{investigation}/comments', [InvestigationController::class, 'comment'])->name('investigations.comments.store');
     });
 
 /*

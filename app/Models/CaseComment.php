@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class CaseComment extends Model
@@ -9,7 +10,12 @@ class CaseComment extends Model
     protected $fillable = [
         'report_id',
         'user_id',
-        'comment'
+        'comment',
+        'is_internal',
+    ];
+
+    protected $casts = [
+        'is_internal' => 'boolean',
     ];
 
     public function report()
@@ -24,5 +30,11 @@ class CaseComment extends Model
         return $this->belongsTo(
             User::class
         );
+    }
+
+    /** Internal notes are never shown to the reporter. */
+    public function scopeInternal(Builder $query): Builder
+    {
+        return $query->where('is_internal', true);
     }
 }

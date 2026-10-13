@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Department;
 use App\Models\Report;
 use Illuminate\Http\Request;
@@ -15,8 +16,9 @@ class SubmitReportController extends Controller
     public function create()
     {
         $departments = Department::orderBy('name')->get(['id', 'name']);
+        $categories = Category::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['slug', 'name']);
 
-        return view('public.report-create', compact('departments'));
+        return view('public.report-create', compact('departments', 'categories'));
     }
 
     public function store(Request $request)

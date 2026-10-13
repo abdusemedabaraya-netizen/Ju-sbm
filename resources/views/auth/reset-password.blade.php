@@ -8,9 +8,9 @@
 
                 <a href="{{ route('home') }}" class="jiacrs-auth-brand">
 
-                    <img src="{{ asset('images/jimma-logo.png') }}"
+                    <!-- <img src="{{ asset('images/jimma-logo.png') }}"
                          alt="Jimma University Logo"
-                         class="jiacrs-auth-logo">
+                         class="jiacrs-auth-logo"> -->
 
                     <div>
                         <div class="jiacrs-auth-university">

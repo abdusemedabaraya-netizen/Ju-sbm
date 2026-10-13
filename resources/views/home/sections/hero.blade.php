@@ -1,5 +1,5 @@
 <section class="jiacrs-hero"
-         style="background-image: url('{{ asset('images/ju.jpg') }}');">
+         style="background-image: url('{{ asset('images/image.png') }}');">
 
     <div class="jiacrs-hero-overlay"></div>
 
@@ -38,13 +38,13 @@
                 </div>
 
                 <div class="jiacrs-hero-buttons">
-                    <a href="{{ route('reports.create') }}" class="btn btn-success btn-lg">
-                        <i class="bi bi-send-fill me-2"></i>Submit Report
-                    </a>
-                    <a href="{{ route('reports.anonymous') }}" class="btn btn-outline-light btn-lg">
-                        <i class="bi bi-incognito me-2"></i>Submit Anonymous Report
-                    </a>
-                </div>
+    <!-- <a href="{{ route('login', ['intended' => route('report.create')]) }}" class="btn btn-success btn-lg">
+        <i class="bi bi-person-check-fill me-2"></i>Submit Identified Report
+    </a> -->
+    <a href="{{ route('report.create') }}" class="btn btn-outline-light btn-lg">
+        <i class="bi bi-incognito me-2"></i>Submit Anonymous Report
+    </a>
+</div>
 
             </div>
         </div>

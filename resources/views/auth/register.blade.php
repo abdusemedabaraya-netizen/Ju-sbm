@@ -1,4 +1,4 @@
- <x-guest-layout>
+ <!-- <x-guest-layout>
     <div class="jiacrs-auth-page">
 
         <div class="jiacrs-auth-card">
@@ -274,4 +274,4 @@
 
     </div>
 
-</x-guest-layout>
+</x-guest-layout> -->

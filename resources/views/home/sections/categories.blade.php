@@ -1,4 +1,4 @@
-<section class="jiacrs-section jiacrs-section-alt" id="categories">
+<!-- <section class="jiacrs-section jiacrs-section-alt" id="categories">
     <div class="container">
 
         <h2 class="jiacrs-section-title">Reporting Categories</h2>
@@ -27,4 +27,4 @@
         </div>
 
     </div>
-</section>
+</section> -->

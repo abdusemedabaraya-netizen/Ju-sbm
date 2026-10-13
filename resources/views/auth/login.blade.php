@@ -135,7 +135,7 @@
                 </button>
 
 
-                {{-- Register Link --}}
+                <!-- {{-- Register Link --}}
                 <div class="jiacrs-auth-register">
 
                     <span>
@@ -150,7 +150,7 @@
 
                     @endif
 
-                </div>
+                </div> -->
 
             </form>
 

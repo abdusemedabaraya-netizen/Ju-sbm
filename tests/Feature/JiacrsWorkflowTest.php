@@ -80,7 +80,10 @@ class JiacrsWorkflowTest extends TestCase
         // -------------------------------------------------------------
         // Step 1: anonymous user visits homepage
         // -------------------------------------------------------------
-        $this->get('/')->assertOk()->assertSee('Submit Report')->assertSee('Track Report');
+        $this->get('/')->assertOk()
+            ->assertSee('Submit Anonymous Report')
+            ->assertSee(route('report.create'))
+            ->assertSee('Track Report');
 
         // -------------------------------------------------------------
         // Step 2: open the submit-report form
@@ -350,6 +353,72 @@ class JiacrsWorkflowTest extends TestCase
             ->assertSessionHasErrors('status');
 
         $this->assertSame('assigned', $report->fresh()->status);
+    }
+
+    public function test_investigator_cannot_resolve_without_findings_via_reports_update(): void
+    {
+        $report = $this->makeReport(['status' => 'investigating']);
+        Investigation::create([
+            'report_id' => $report->id,
+            'investigator_id' => $this->investigator->id,
+        ]);
+
+        // BR-09: even the generic report-update endpoint must refuse to resolve
+        // a case with no findings/recommendations on record.
+        $this->actingAs($this->investigator)
+            ->from(route('reports.show', $report))
+            ->patch(route('reports.update', $report), ['status' => 'resolved'])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('investigating', $report->fresh()->status);
+
+        // Record findings and recommendations; now the same call succeeds.
+        Investigation::where('report_id', $report->id)->firstOrFail()->update([
+            'findings' => 'Findings recorded.',
+            'recommendations' => 'Recommend dismissal.',
+        ]);
+
+        $this->actingAs($this->investigator)
+            ->from(route('reports.show', $report))
+            ->patch(route('reports.update', $report), ['status' => 'resolved'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('resolved', $report->fresh()->status);
+    }
+
+    // -----------------------------------------------------------------
+    // Reporter privacy: internal staff notes must never leak
+    // -----------------------------------------------------------------
+
+    public function test_reporter_never_sees_internal_status_notes(): void
+    {
+        $reporter = User::factory()->create();
+        $reporter->assignRole('User');
+
+        $report = $this->makeReport([
+            'user_id' => $reporter->id,
+            'anonymous' => false,
+        ]);
+
+        ReportStatusHistory::create([
+            'report_id' => $report->id,
+            'from_status' => null,
+            'to_status' => 'submitted',
+            'changed_by' => null,
+        ]);
+        ReportStatusHistory::create([
+            'report_id' => $report->id,
+            'from_status' => 'submitted',
+            'to_status' => 'under_review',
+            'changed_by' => $this->admin->id,
+            'note' => 'INTERNAL SECRET NOTE - do not disclose',
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('my.reports.show', $report))
+            ->assertOk()
+            ->assertSee('Under Review')
+            ->assertDontSee('INTERNAL SECRET NOTE');
     }
 
     // -----------------------------------------------------------------

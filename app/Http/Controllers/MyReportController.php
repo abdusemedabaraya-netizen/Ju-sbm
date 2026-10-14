@@ -18,7 +18,12 @@ class MyReportController extends Controller
     {
         abort_unless($report->user_id === auth()->id(), 404);
 
-        $report->load('department', 'statusHistories');
+        // Staff-only fields (the internal status-change note and the acting
+        // user) are never loaded for a reporter.
+        $report->load(
+            'department',
+            'statusHistories:id,report_id,from_status,to_status,created_at'
+        );
 
         return view('my-reports.show', compact('report'));
     }

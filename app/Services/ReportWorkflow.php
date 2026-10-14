@@ -66,6 +66,17 @@ class ReportWorkflow
             ]);
         }
 
+        // BR-09: a case can never be resolved before the assigned investigator
+        // has recorded both findings and recommendations. Enforced here so that
+        // every entry point (case workspace, report page, or a crafted request)
+        // obeys the same rule.
+        if ($to === 'resolved' && $report->investigation
+            && (blank($report->investigation->findings) || blank($report->investigation->recommendations))) {
+            throw ValidationException::withMessages([
+                'status' => 'Record findings and recommendations before marking the case resolved.',
+            ]);
+        }
+
         $from = $report->status;
 
         DB::transaction(function () use ($report, $from, $to, $actor, $note) {

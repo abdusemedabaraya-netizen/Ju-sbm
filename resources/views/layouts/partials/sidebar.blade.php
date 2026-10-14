@@ -225,11 +225,6 @@
               <i class="nav-icon bi bi-file-earmark-text"></i><p>My Reports</p>
             </a>
           </li>
-          <li class="nav-item">
-            <a href="{{ route('profile.edit') }}" class="nav-link">
-              <i class="nav-icon bi bi-person"></i><p>Profile</p>
-            </a>
-          </li>
         @endrole
       </ul>
     </nav>

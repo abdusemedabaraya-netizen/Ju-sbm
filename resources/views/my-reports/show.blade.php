@@ -72,9 +72,6 @@
                   <span class="badge text-bg-{{ $statusBadge[$history->to_status] ?? 'secondary' }}">
                     {{ ucwords(str_replace('_', ' ', $history->to_status)) }}
                   </span>
-                  @if ($history->note)
-                    <span class="ms-2">{{ $history->note }}</span>
-                  @endif
                 </span>
                 <small class="text-secondary">{{ optional($history->created_at)->format('d M Y H:i') }}</small>
               </li>

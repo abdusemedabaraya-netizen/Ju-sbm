@@ -50,27 +50,26 @@
                 {{-- Email --}}
                 <div class="jiacrs-form-group">
 
-                    <label for="email" class="jiacrs-form-label">
-                        Email Address
-                    </label>
+                    <label for="username" class="jiacrs-form-label">
+    Username
+</label>
 
-                    <input
-                        id="email"
-                        class="jiacrs-form-input"
-                        type="email"
-                        name="email"
-                        value="{{ old('email') }}"
-                        required
-                        autofocus
-                        autocomplete="username"
-                        placeholder="Enter your email"
-                    >
+<input
+    id="username"
+    class="jiacrs-form-input"
+    type="text"
+    name="username"
+    value="{{ old('username') }}"
+    required
+    autofocus
+    autocomplete="username"
+    placeholder="Enter your university username"
+>
 
-                    <x-input-error
-                        :messages="$errors->get('email')"
-                        class="jiacrs-form-error"
-                    />
-
+<x-input-error
+    :messages="$errors->get('username')"
+    class="jiacrs-form-error"
+/>
                 </div>
 
 

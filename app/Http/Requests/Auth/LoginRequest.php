@@ -2,62 +2,104 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\LdapAuthenticationService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
 
-    /**
-     * Attempt to authenticate the request's credentials.
-     *
-     * @throws ValidationException
-     */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $username = trim($this->string('username'));
+        $password = (string) $this->string('password');
+
+        if ($username === '' || $password === '') {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'username' => __('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        // 1. Try LDAP first.
+        $ldapUser = app(LdapAuthenticationService::class)
+            ->authenticate($username, $password);
+
+        if ($ldapUser) {
+            $user = User::firstOrCreate(
+                ['email' => $ldapUser['email']],
+                [
+                    'name' => $ldapUser['name'],
+                    'password' => Hash::make(Str::random(64)),
+                    'email_verified_at' => now(),
+                    'status' => true,
+                    'role' => 'reporter',
+                ]
+            );
+
+            $user->update(['name' => $ldapUser['name']]);
+
+            $defaultRole = config('ldap.default_role', 'User');
+
+            \Spatie\Permission\Models\Role::firstOrCreate([
+                'name' => $defaultRole,
+                'guard_name' => 'web',
+            ]);
+
+            if (! $user->hasRole($defaultRole)) {
+                $user->assignRole($defaultRole);
+            }
+
+            Auth::login($user, $this->boolean('remember'));
+            RateLimiter::clear($this->throttleKey());
+
+            return;
+        }
+
+        // 2. Fallback for seeded/local accounts, such as superadmin@test.com.
+        //    Only attempts this when the username looks like an email.
+        if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
+            if (Auth::attempt(
+                ['email' => $username, 'password' => $password],
+                $this->boolean('remember')
+            )) {
+                RateLimiter::clear($this->throttleKey());
+
+                return;
+            }
+        }
+
+        // 3. Both LDAP and local login failed.
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'username' => __('auth.failed'),
+        ]);
     }
 
-    /**
-     * Ensure the login request is not rate limited.
-     *
-     * @throws ValidationException
-     */
     public function ensureIsNotRateLimited(): void
     {
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -69,18 +111,15 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'username' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('username')) . '|' . $this->ip());
     }
 }

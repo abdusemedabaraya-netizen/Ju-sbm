@@ -13,6 +13,11 @@ class TrackController extends Controller
         return view('public.track');
     }
 
+    public function indexInDashboard()
+    {
+        return view('my-reports.track');
+    }
+
     public function search(Request $request)
     {
         $data = $request->validate([
@@ -30,8 +35,13 @@ class TrackController extends Controller
                 ->withErrors(['tracking_number' => 'No report matches that tracking number and access code.']);
         }
 
+        // Authenticated dashboard tracking uses the dashboard result view.
+        $view = request()->routeIs('my.reports.track.search')
+            ? 'my-reports.track-result'
+            : 'public.track-result';
+
         // Pass only what the reporter may see.
-        return view('public.track-result', [
+        return view($view, [
             'report' => $report->only(['tracking_number', 'category', 'status', 'created_at', 'updated_at']),
             'history' => $report->statusHistories()->get(['to_status', 'created_at']),
         ]);

@@ -97,6 +97,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/photo', [ProfilePhotoController::class, 'store'])->name('profile.photo.store');
     Route::delete('/profile/photo', [ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
 
+    Route::get('/my/reports/create', [SubmitReportController::class, 'createInDashboard'])->name('my.reports.create');
+    Route::get('/my/reports/submitted', [SubmitReportController::class, 'submittedInDashboard'])->name('my.reports.submitted');
+    Route::get('/my/reports/track', [TrackController::class, 'indexInDashboard'])->name('my.reports.track.index');
+    Route::post('/my/reports/track', [TrackController::class, 'search'])->name('my.reports.track.search');
     Route::get('/my/reports', [MyReportController::class, 'index'])->name('my.reports.index');
     Route::get('/my/reports/{report}', [MyReportController::class, 'show'])->name('my.reports.show');
 

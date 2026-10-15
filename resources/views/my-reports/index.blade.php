@@ -16,8 +16,11 @@
 
 @section('content')
   <div class="card mb-4">
-    <div class="card-header">
-      <h3 class="card-title">Reports I Submitted</h3>
+    <div class="card-header d-flex align-items-center">
+      <h3 class="card-title mb-0">Reports I Submitted</h3>
+      <a href="{{ route('my.reports.track.index') }}" class="btn btn-sm btn-outline-primary ms-auto">
+        <i class="bi bi-search"></i> Track a report
+      </a>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">

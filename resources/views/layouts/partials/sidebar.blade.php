@@ -216,7 +216,7 @@
         @role('User')
           <li class="nav-header">MY ACCOUNT</li>
           <li class="nav-item">
-            <a href="{{ route('report.create') }}" class="nav-link {{ request()->routeIs('report.create') ? 'active' : '' }}">
+            <a href="{{ route('my.reports.create') }}" class="nav-link {{ request()->routeIs('my.reports.create') ? 'active' : '' }}">
               <i class="nav-icon bi bi-plus-circle"></i><p>Submit Report</p>
             </a>
           </li>

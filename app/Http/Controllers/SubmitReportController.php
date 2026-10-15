@@ -30,6 +30,21 @@ class SubmitReportController extends Controller
         return view('public.report-create', compact('departments', 'categories'));
     }
 
+    public function createInDashboard()
+    {
+        SiteSettings::applyToConfig();
+
+        if (! config('jiacrs.public_reporting_enabled')) {
+            return redirect()->route('my.reports.index')
+                ->with('error', 'Public reporting is temporarily closed.');
+        }
+
+        $departments = Department::orderBy('name')->get(['id', 'name']);
+        $categories  = Category::active()->orderBy('sort_order')->get(['id', 'slug', 'name']);
+
+        return view('my-reports.submit', compact('departments', 'categories'));
+    }
+
     public function store(Request $request, ReportWorkflow $workflow)
     {
         SiteSettings::applyToConfig();
@@ -97,7 +112,9 @@ class SubmitReportController extends Controller
         $workflow->notifyNewReport($report);
 
         // No IP address or user agent is stored for any report.
-        return redirect()->route('report.submitted')->with([
+        $submittedRoute = auth()->check() ? 'my.reports.submitted' : 'report.submitted';
+
+        return redirect()->route($submittedRoute)->with([
             'tracking_number' => $report->tracking_number,
             'access_code'     => $accessCode,
         ]);
@@ -109,6 +126,17 @@ class SubmitReportController extends Controller
         abort_unless(session()->has('access_code'), 404);
 
         return view('public.report-submitted', [
+            'trackingNumber' => session('tracking_number'),
+            'accessCode'     => session('access_code'),
+        ]);
+    }
+
+    public function submittedInDashboard()
+    {
+        // The code is only available right after submission.
+        abort_unless(session()->has('access_code'), 404);
+
+        return view('my-reports.submitted', [
             'trackingNumber' => session('tracking_number'),
             'accessCode'     => session('access_code'),
         ]);

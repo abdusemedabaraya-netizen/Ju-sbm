@@ -5,50 +5,28 @@ namespace App\View\Composers;
 use App\Models\Investigation;
 use App\Models\Report;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\View\View;
 
 /**
  * Supplies the Investigations sidebar count badges.
  *
  * Counts are scoped by role (BR-08): an investigator only sees their own case
- * numbers, admins see everything. The case totals come from ONE grouped query
- * and the result is cached for a short time.
+ * numbers, admins see everything. The case totals come from ONE grouped query,
+ * shared and cached through the base composer.
  */
-class InvestigationCountsComposer
+class InvestigationCountsComposer extends CachedCountsComposer
 {
-    private const TTL = 30;
-
-    public function compose(View $view): void
+    protected function variable(): string
     {
-        $user = auth()->user();
-
-        if (! $user || ! $user->hasAnyRole(['Super Admin', 'Admin', 'Investigator'])) {
-            $view->with('caseCounts', $this->emptyCounts());
-
-            return;
-        }
-
-        $view->with('caseCounts', $this->counts($user));
+        return 'caseCounts';
     }
 
-    private function counts(User $user): array
+    protected function cacheKeyPrefix(): string
     {
-        $scope = $user->hasAnyRole(['Super Admin', 'Admin']) ? 'admin' : 'investigator';
-        $key = "jiacrs.case_counts.{$user->id}.{$scope}";
-
-        // Tests mutate the database between requests and expect fresh numbers.
-        if (app()->runningUnitTests()) {
-            return $this->query($user);
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::TTL), fn () => $this->query($user));
+        return 'jiacrs.case_counts';
     }
 
-    private function query(User $user): array
+    protected function query(User $user): array
     {
-        $isAdmin = $user->hasAnyRole(['Super Admin', 'Admin']);
-
         $rows = Investigation::query()
             ->visibleTo($user)
             ->join('reports', 'reports.id', '=', 'investigations.report_id')
@@ -71,14 +49,14 @@ class InvestigationCountsComposer
         }
 
         // "Assign Investigator" badge: reports Under Review with no case yet.
-        $counts['unassigned'] = $isAdmin
-            ? Report::doesntHave('investigation')->where('status', 'under_review')->count()
+        $counts['unassigned'] = $user->isAdmin()
+            ? Report::unassignedUnderReview()->count()
             : 0;
 
         return $counts;
     }
 
-    private function emptyCounts(): array
+    protected function emptyCounts(): array
     {
         return [
             'total' => 0,

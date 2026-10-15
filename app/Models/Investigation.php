@@ -56,7 +56,7 @@ class Investigation extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->hasAnyRole(['Super Admin', 'Admin'])) {
+        if ($user->isAdmin()) {
             return $query;
         }
 

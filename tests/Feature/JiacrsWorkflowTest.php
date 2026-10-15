@@ -496,7 +496,7 @@ class JiacrsWorkflowTest extends TestCase
             'subject' => 'Registered report',
             'description' => 'A registered user submits a report.',
             'anonymous' => false,
-        ])->assertRedirect(route('report.submitted'));
+        ])->assertRedirect(route('my.reports.submitted'));
 
         $report = Report::firstOrFail();
         $this->assertSame($reporter->id, $report->user_id);

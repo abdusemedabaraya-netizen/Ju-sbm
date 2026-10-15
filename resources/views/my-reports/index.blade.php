@@ -6,14 +6,6 @@
   <li class="breadcrumb-item active" aria-current="page">My Reports</li>
 @endsection
 
-@php
-  $statusBadge = [
-    'submitted' => 'secondary', 'under_review' => 'info', 'assigned' => 'primary',
-    'investigating' => 'warning', 'resolved' => 'success', 'closed' => 'dark', 'rejected' => 'danger',
-  ];
-  $priorityBadge = ['low' => 'success', 'medium' => 'info', 'high' => 'warning', 'critical' => 'danger'];
-@endphp
-
 @section('content')
   <div class="card mb-4">
     <div class="card-header d-flex align-items-center">
@@ -43,14 +35,10 @@
                 <td>{{ \Illuminate\Support\Str::limit($report->subject, 45) }}</td>
                 <td>{{ $report->department?->name ?? '—' }}</td>
                 <td>
-                  <span class="badge text-bg-{{ $priorityBadge[$report->priority] ?? 'secondary' }}">
-                    {{ ucfirst($report->priority) }}
-                  </span>
+                  <x-priority-badge :priority="$report->priority" />
                 </td>
                 <td>
-                  <span class="badge text-bg-{{ $statusBadge[$report->status] ?? 'secondary' }}">
-                    {{ ucwords(str_replace('_', ' ', $report->status)) }}
-                  </span>
+                  <x-status-badge :status="$report->status" />
                 </td>
                 <td>{{ optional($report->created_at)->format('d M Y') }}</td>
                 <td class="text-end">

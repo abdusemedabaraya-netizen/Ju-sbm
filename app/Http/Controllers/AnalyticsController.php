@@ -2,25 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AnalyticsFilterRequest;
 use App\Models\Category;
 use App\Models\Department;
-use Illuminate\Http\Request;
+use App\Models\Report;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
-    private const STATUSES   = ['submitted', 'under_review', 'assigned', 'investigating', 'resolved', 'closed', 'rejected'];
-    private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
-    private const CLOSED     = ['resolved', 'closed', 'rejected'];
-
-    public function index(Request $request)
+    public function index(AnalyticsFilterRequest $request)
     {
-        $data = $request->validate([
-            'from'          => ['nullable', 'date'],
-            'to'            => ['nullable', 'date', 'after_or_equal:from'],
-            'department_id' => ['nullable', 'integer'],
-        ]);
+        $data = $request->validated();
 
         $from   = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subMonths(11)->startOfMonth();
         $to     = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
@@ -33,10 +26,10 @@ class AnalyticsController extends Controller
             ->when($deptId, fn ($q) => $q->where('department_id', $deptId));
 
         $total    = $base()->count();
-        $open     = $base()->whereNotIn('status', self::CLOSED)->count();
-        $done     = $base()->whereIn('status', ['resolved', 'closed'])->count();
+        $open     = $base()->whereNotIn('status', Report::CLOSED_STATUSES)->count();
+        $done     = $base()->whereIn('status', Report::DONE_STATUSES)->count();
         $rejected = $base()->where('status', 'rejected')->count();
-        $highOpen = $base()->whereIn('priority', ['high', 'critical'])->whereNotIn('status', self::CLOSED)->count();
+        $highOpen = $base()->whereIn('priority', Report::HIGH_RISK_PRIORITIES)->whereNotIn('status', Report::CLOSED_STATUSES)->count();
 
         $hours = DB::table('report_status_histories as h')
             ->join('reports as r', 'r.id', '=', 'h.report_id')
@@ -79,15 +72,15 @@ class AnalyticsController extends Controller
         $charts = [
             'trend'    => ['labels' => $labels, 'all' => $all, 'high' => $high],
             'status'   => [
-                'labels' => array_map(fn ($s) => ucwords(str_replace('_', ' ', $s)), self::STATUSES),
-                'data'   => array_map(fn ($s) => (int) ($byStatus[$s] ?? 0), self::STATUSES),
+                'labels' => array_map([Report::class, 'label'], Report::STATUSES),
+                'data'   => array_map(fn ($s) => (int) ($byStatus[$s] ?? 0), Report::STATUSES),
             ],
             'priority' => [
-                'labels' => array_map('ucfirst', self::PRIORITIES),
-                'data'   => array_map(fn ($p) => (int) ($byPriority[$p] ?? 0), self::PRIORITIES),
+                'labels' => array_map([Report::class, 'label'], Report::PRIORITIES),
+                'data'   => array_map(fn ($p) => (int) ($byPriority[$p] ?? 0), Report::PRIORITIES),
             ],
             'category' => [
-                'labels' => $byCategory->keys()->map(fn ($s) => $names[$s] ?? ucwords(str_replace('_', ' ', $s)))->all(),
+                'labels' => $byCategory->keys()->map(fn ($s) => $names[$s] ?? Report::label($s))->all(),
                 'data'   => $byCategory->values()->map(fn ($v) => (int) $v)->all(),
             ],
         ];

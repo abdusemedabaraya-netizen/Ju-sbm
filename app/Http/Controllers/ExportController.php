@@ -2,20 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ExportFilterRequest;
 use App\Models\Department;
+use App\Models\Report;
 use App\Services\AuditLogger;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ExportController extends Controller
 {
-    private const STATUSES   = ['submitted', 'under_review', 'assigned', 'investigating', 'resolved', 'closed', 'rejected'];
-    private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
-    private const CLOSED     = ['resolved', 'closed', 'rejected'];
-
     public function index()
     {
         $departments = Department::orderBy('name')->get(['id', 'name']);
@@ -23,9 +19,9 @@ class ExportController extends Controller
         return view('exports.index', compact('departments'));
     }
 
-    public function csv(Request $request)
+    public function csv(ExportFilterRequest $request)
     {
-        [$rows, $meta] = $this->fetch($request);
+        [$rows, $meta] = $this->fetch($request->validated());
 
         AuditLogger::log('report.exported', null, "CSV: {$meta['label']} ({$rows->count()} rows)");
 
@@ -49,9 +45,9 @@ class ExportController extends Controller
     }
 
     /** Printable page: use the browser's "Save as PDF". */
-    public function print(Request $request)
+    public function print(ExportFilterRequest $request)
     {
-        [$rows, $meta] = $this->fetch($request);
+        [$rows, $meta] = $this->fetch($request->validated());
 
         AuditLogger::log('report.exported', null, "Print: {$meta['label']} ({$rows->count()} rows)");
 
@@ -64,17 +60,8 @@ class ExportController extends Controller
         return view('exports.print', compact('rows', 'meta', 'summary'));
     }
 
-    private function fetch(Request $request): array
+    private function fetch(array $data): array
     {
-        $data = $request->validate([
-            'period'        => ['required', Rule::in(['daily', 'weekly', 'monthly', 'annual', 'custom'])],
-            'from'          => ['nullable', 'date', 'required_if:period,custom'],
-            'to'            => ['nullable', 'date', 'required_if:period,custom'],
-            'status'        => ['nullable', Rule::in(array_merge(self::STATUSES, ['open']))],
-            'priority'      => ['nullable', Rule::in(self::PRIORITIES)],
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
-        ]);
-
         [$from, $to, $title] = match ($data['period']) {
             'daily'   => [now()->startOfDay(), now()->endOfDay(), 'Daily report'],
             'weekly'  => [now()->startOfWeek(), now()->endOfWeek(), 'Weekly report'],
@@ -95,7 +82,7 @@ class ExportController extends Controller
             ->leftJoin('categories as c', 'c.slug', '=', 'r.category')
             ->whereNull('r.deleted_at')
             ->whereBetween('r.created_at', [$from, $to])
-            ->when(($data['status'] ?? null) === 'open', fn ($q) => $q->whereNotIn('r.status', self::CLOSED))
+            ->when(($data['status'] ?? null) === 'open', fn ($q) => $q->whereNotIn('r.status', Report::CLOSED_STATUSES))
             ->when(($data['status'] ?? null) && $data['status'] !== 'open', fn ($q) => $q->where('r.status', $data['status']))
             ->when($data['priority'] ?? null, fn ($q, $v) => $q->where('r.priority', $v))
             ->when($data['department_id'] ?? null, fn ($q, $v) => $q->where('r.department_id', $v))

@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Services\AuditLogger;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
-    private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
-
     public function index()
     {
         $categories = Category::orderBy('sort_order')->orderBy('name')->get();
@@ -26,16 +23,12 @@ class CategoryController extends Controller
         return view('categories.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
-        $data = $request->validate([
-            'name'             => ['required', 'string', 'max:100', 'unique:categories,name'],
-            'default_priority' => ['required', Rule::in(self::PRIORITIES)],
-            'sort_order'       => ['nullable', 'integer', 'min:0', 'max:999'],
-        ]);
+        $data = $request->validated();
 
         $category = Category::create([
-            'slug'             => $this->makeSlug($data['name']),
+            'slug'             => Category::generateUniqueSlug($data['name']),
             'name'             => $data['name'],
             'default_priority' => $data['default_priority'],
             'sort_order'       => $data['sort_order'] ?? 0,
@@ -52,13 +45,9 @@ class CategoryController extends Controller
         return view('categories.edit', compact('category'));
     }
 
-    public function update(Request $request, Category $category)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $data = $request->validate([
-            'name'             => ['required', 'string', 'max:100', Rule::unique('categories', 'name')->ignore($category->id)],
-            'default_priority' => ['required', Rule::in(self::PRIORITIES)],
-            'sort_order'       => ['nullable', 'integer', 'min:0', 'max:999'],
-        ]);
+        $data = $request->validated();
 
         // The slug never changes: existing reports keep pointing at it.
         $category->update([
@@ -83,21 +72,5 @@ class CategoryController extends Controller
         $category->delete();
 
         return back()->with('success', 'Category deleted.');
-    }
-
-    private function makeSlug(string $name): string
-    {
-        $slug = Str::slug($name, '_');
-
-        if ($slug === '') {               // e.g. a name written only in Amharic script
-            $slug = 'category_' . Str::lower(Str::random(6));
-        }
-
-        $base = $slug;
-        while (Category::where('slug', $slug)->exists()) {
-            $slug = $base . '_' . Str::lower(Str::random(4));
-        }
-
-        return Str::limit($slug, 50, '');
     }
 }

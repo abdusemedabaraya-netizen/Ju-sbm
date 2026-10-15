@@ -19,6 +19,27 @@ class EvidenceStorage
         'video/mp4'       => 'mp4',
     ];
 
+    public function __construct(private readonly ImageProcessor $images)
+    {
+    }
+
+    /**
+     * Store every upload in one call. The sequence continues from the highest
+     * existing evidence id so anonymous files keep neutral, non-colliding names.
+     *
+     * @param array<int, UploadedFile> $files
+     */
+    public function storeMany(Report $report, array $files, ?int $uploadedBy): void
+    {
+        $sequence = ($report->evidences()->max('id') ?? 0) + 1;
+
+        foreach ($files as $file) {
+            if ($file instanceof UploadedFile) {
+                $this->store($report, $file, $uploadedBy, $sequence++);
+            }
+        }
+    }
+
     public function store(Report $report, UploadedFile $file, ?int $uploadedBy, int $sequence): Evidence
     {
         $mime = $file->getMimeType();   // detected from file CONTENT, not the file name
@@ -36,7 +57,7 @@ class EvidenceStorage
 
         if (in_array($mime, ['image/jpeg', 'image/png'], true)) {
             // Re-encoding the pixels drops EXIF (GPS, camera, date) and other metadata.
-            $contents = $this->reencodeImage($file->getRealPath(), $mime);
+            $contents = $this->images->stripMetadata($file->getRealPath());
             $disk->put($path, $contents);
             $hash     = hash('sha256', $contents);
             $size     = strlen($contents);
@@ -62,42 +83,6 @@ class EvidenceStorage
             'sha256'            => $hash,
             'metadata_stripped' => $stripped,
         ]);
-    }
-
-    private function reencodeImage(string $path, string $mime): string
-    {
-        if (! extension_loaded('gd')) {
-            throw ValidationException::withMessages([
-                'files' => 'Image processing is unavailable on the server (enable the PHP GD extension).',
-            ]);
-        }
-
-        $img = $mime === 'image/png' ? @imagecreatefrompng($path) : @imagecreatefromjpeg($path);
-
-        if (! $img) {
-            throw ValidationException::withMessages(['files' => 'An image could not be processed.']);
-        }
-
-        // Keep the picture upright before the orientation tag is lost.
-        if ($mime === 'image/jpeg' && function_exists('exif_read_data')) {
-            $orientation = @exif_read_data($path)['Orientation'] ?? 1;
-            $angle = [3 => 180, 6 => -90, 8 => 90][$orientation] ?? 0;
-            if ($angle) {
-                $img = imagerotate($img, $angle, 0) ?: $img;
-            }
-        }
-
-        ob_start();
-        if ($mime === 'image/png') {
-            imagesavealpha($img, true);
-            imagepng($img);
-        } else {
-            imagejpeg($img, null, 90);
-        }
-        $data = ob_get_clean();
-        imagedestroy($img);
-
-        return $data;
     }
 
     private function cleanName(string $name, string $ext): string

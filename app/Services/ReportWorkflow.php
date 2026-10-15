@@ -46,12 +46,12 @@ class ReportWorkflow
             return [];
         }
 
-        if ($user->hasAnyRole(['Admin', 'Super Admin'])) {
+        if ($user->isAdmin()) {
             // Admins can move to available transitions in general
             return self::TRANSITIONS[$report->status] ?? [];
         }
 
-        if ($user->hasRole('Investigator') && $report->investigation?->investigator_id === $user->id) {
+        if ($user->isInvestigator() && $report->investigation?->investigator_id === $user->id) {
             return self::INVESTIGATOR[$report->status] ?? [];
         }
 
@@ -109,6 +109,13 @@ class ReportWorkflow
             ]);
         }
 
+        // A reporter must never be put in charge of their own case.
+        if ($report->user_id && $report->user_id === $investigator->id) {
+            throw ValidationException::withMessages([
+                'investigator_id' => 'An investigator cannot be assigned to a case they reported.',
+            ]);
+        }
+
         $investigation = DB::transaction(function () use ($report, $investigator, $actor) {
             $investigation = Investigation::create([
                 'report_id'       => $report->id,
@@ -132,7 +139,7 @@ class ReportWorkflow
         $report = $investigation->report;
 
         DB::transaction(function () use ($investigation, $report, $actor) {
-            if (in_array($report->status, ['assigned', 'investigating'], true)) {
+            if (in_array($report->status, Report::ACTIVE_STATUSES, true)) {
                 $from = $report->status;
                 $report->update(['status' => 'under_review']);
                 $this->record($report, $from, 'under_review', $actor->id, 'Assignment removed');
@@ -153,7 +160,7 @@ class ReportWorkflow
     /** Admins are told about the new report; a registered reporter gets a confirmation. */
     public function notifyNewReport(Report $report): void
     {
-        $this->safeNotify(User::role(['Admin', 'Super Admin'])->get(), new NewReportSubmitted($report));
+        $this->safeNotify(User::role(User::ADMIN_ROLES)->get(), new NewReportSubmitted($report));
 
         if ($report->user_id && $report->user) {
             $this->safeNotify($report->user, new ReportSubmittedConfirmation($report));

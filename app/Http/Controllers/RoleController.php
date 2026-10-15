@@ -2,29 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AssignRoleRequest;
+use App\Http\Requests\StoreStaffRequest;
 use App\Models\User;
 use App\Services\AuditLogger;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    private const ROLES = ['Super Admin', 'Admin', 'Investigator', 'User'];
-
     public function index()
     {
         $roles = Role::withCount('users')->orderBy('id')->get();
         $staff = User::with('roles:id,name')->orderBy('name')->paginate(15);
 
-        return view('roles.index', ['roles' => $roles, 'staff' => $staff, 'allRoles' => self::ROLES]);
+        return view('roles.index', ['roles' => $roles, 'staff' => $staff, 'allRoles' => User::ROLES]);
     }
 
-    public function assign(Request $request, User $user)
+    public function assign(AssignRoleRequest $request, User $user)
     {
-        $data = $request->validate(['role' => ['required', Rule::in(self::ROLES)]]);
+        $data = $request->validated();
 
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'You cannot change your own role.');
@@ -45,14 +41,9 @@ class RoleController extends Controller
     }
 
     /** Super Admin creates staff (Admin / Investigator) accounts. */
-    public function storeStaff(Request $request)
+    public function storeStaff(StoreStaffRequest $request)
     {
-        $data = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role'     => ['required', Rule::in(self::ROLES)],
-            'password' => ['required', Password::min(10)->letters()->numbers()],
-        ]);
+        $data = $request->validated();
 
         $user = User::create([
             'name'     => $data['name'],

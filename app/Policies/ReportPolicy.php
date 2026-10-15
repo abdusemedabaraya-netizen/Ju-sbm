@@ -19,17 +19,17 @@ class ReportPolicy
     /** Any staff member may open the reports section. */
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin', 'Investigator']);
+        return $user->isStaff();
     }
 
     /** Admins see everything; an investigator only their assigned case. */
     public function view(User $user, Report $report): bool
     {
-        if ($user->hasAnyRole(['Super Admin', 'Admin'])) {
+        if ($user->isAdmin()) {
             return true;
         }
 
-        return $user->hasRole('Investigator')
+        return $user->isInvestigator()
             && $report->investigation?->investigator_id === $user->id;
     }
 
@@ -42,13 +42,13 @@ class ReportPolicy
     /** BR-10: priority is set automatically and only an Admin may override it. */
     public function changePriority(User $user, Report $report): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin']);
+        return $user->isAdmin();
     }
 
     /** BR-07: assign only while Under Review, and only by Admin / Super Admin. */
     public function assign(User $user, Report $report): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin'])
+        return $user->isAdmin()
             && $report->status === 'under_review';
     }
 
@@ -61,6 +61,6 @@ class ReportPolicy
     /** BR-08 / BR-10: deleting a report is an admin-only soft delete. */
     public function delete(User $user, Report $report): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin']);
+        return $user->isAdmin();
     }
 }

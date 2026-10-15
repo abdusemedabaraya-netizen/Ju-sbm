@@ -14,6 +14,31 @@
 @endphp
 
 @section('content')
+  @php
+    $viewPresets = [
+      ''                => ['label' => 'All',               'count' => $reportCounts['all'] ?? 0,             'color' => 'secondary'],
+      'new'             => ['label' => 'New',               'count' => $reportCounts['new'] ?? 0,             'color' => 'warning'],
+      'under_review'    => ['label' => 'Under Review',      'count' => $reportCounts['under_review'] ?? 0,    'color' => 'info'],
+      'in_progress'     => ['label' => 'In Progress',       'count' => $reportCounts['in_progress'] ?? 0,     'color' => 'primary'],
+      'high_risk'       => ['label' => 'High Risk',         'count' => $reportCounts['high_risk'] ?? 0,       'color' => 'danger'],
+      'resolved_closed' => ['label' => 'Resolved & Closed', 'count' => $reportCounts['resolved_closed'] ?? 0, 'color' => 'success'],
+      'rejected'        => ['label' => 'Rejected',          'count' => $reportCounts['rejected'] ?? 0,        'color' => 'dark'],
+    ];
+  @endphp
+
+  {{-- One-click status presets (carry live counts). --}}
+  <ul class="nav nav-pills flex-wrap gap-1 mb-3">
+    @foreach ($viewPresets as $key => $preset)
+      <li class="nav-item">
+        <a class="nav-link py-1 {{ $activeView === ($key ?: null) ? 'active' : 'bg-light' }}"
+           href="{{ $key === '' ? route('reports.index') : route('reports.index', ['view' => $key]) }}">
+          {{ $preset['label'] }}
+          <span class="badge text-bg-{{ $preset['color'] }} ms-1">{{ $preset['count'] }}</span>
+        </a>
+      </li>
+    @endforeach
+  </ul>
+
   <div class="card mb-4">
     <div class="card-header">
       <h3 class="card-title">Filter reports</h3>

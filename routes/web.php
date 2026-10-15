@@ -64,10 +64,6 @@ Route::redirect('/report/create', '/report')->name('reports.create');
 Route::redirect('/report/anonymous', '/report')->name('reports.anonymous');
 Route::redirect('/report/track', '/track')->name('reports.track');
 
-Route::post('/report/track', [TrackController::class, 'search'])
-    ->middleware('throttle:10,1')
-    ->name('reports.track.search');
-
 /*
 |--------------------------------------------------------------------------
 | After login
@@ -75,7 +71,7 @@ Route::post('/report/track', [TrackController::class, 'search'])
 */
 
 Route::get('/dashboard', function () {
-    if (auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Investigator'])) {
+    if (auth()->user()->isStaff()) {
         return redirect()->route('admin.dashboard');
     }
 
@@ -97,9 +93,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/photo', [ProfilePhotoController::class, 'store'])->name('profile.photo.store');
     Route::delete('/profile/photo', [ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
 
-    Route::get('/my/reports/create', [SubmitReportController::class, 'createInDashboard'])->name('my.reports.create');
-    Route::get('/my/reports/submitted', [SubmitReportController::class, 'submittedInDashboard'])->name('my.reports.submitted');
-    Route::get('/my/reports/track', [TrackController::class, 'indexInDashboard'])->name('my.reports.track.index');
+    Route::get('/my/reports/create', [SubmitReportController::class, 'create'])->name('my.reports.create');
+    Route::get('/my/reports/submitted', [SubmitReportController::class, 'submitted'])->name('my.reports.submitted');
+    Route::get('/my/reports/track', [TrackController::class, 'index'])->name('my.reports.track.index');
     Route::post('/my/reports/track', [TrackController::class, 'search'])->name('my.reports.track.search');
     Route::get('/my/reports', [MyReportController::class, 'index'])->name('my.reports.index');
     Route::get('/my/reports/{report}', [MyReportController::class, 'show'])->name('my.reports.show');
@@ -122,9 +118,9 @@ Route::middleware(['auth', 'verified', 'role:Super Admin|Admin|Investigator'])
         Route::resource('reports', ReportController::class)
             ->only(['index', 'show', 'update', 'destroy']);
 
-        // BR-07: assign an investigator from the report page (Admin / Super Admin,
-        // only while Under Review). Existing route names stay intact.
-        Route::post('reports/{report}/assign', [ReportController::class, 'assign'])->name('reports.assign');
+        // Assignment has ONE action: investigations.store (Admin / Super Admin,
+        // only while Under Review). The report page and the assign page are just
+        // two forms posting to it.
 
         Route::post('reports/{report}/evidence', [EvidenceController::class, 'store'])->name('evidence.store');
         Route::get('evidence/{evidence}/download', [EvidenceController::class, 'download'])->name('evidence.download');

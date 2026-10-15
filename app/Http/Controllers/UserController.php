@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UserFilterRequest;
 use App\Models\User;
-use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index(Request $request)
+    public function index(UserFilterRequest $request)
     {
+        $search = $request->validated('search');
+
         $users = User::with('roles:id,name')
-            ->when($request->search, fn ($q, $s) => $q->where(fn ($w) => $w
+            ->when($search, fn ($q, $s) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$s}%")
                 ->orWhere('email', 'like', "%{$s}%")))
             ->latest()

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Report;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -12,21 +13,16 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Base query. Investigators only see their own assigned cases.
-        $base = fn () => DB::table('reports')
-            ->whereNull('deleted_at')
-            ->when(
-                $user->hasRole('Investigator') && ! $user->hasAnyRole(['Admin', 'Super Admin']),
-                fn ($q) => $q->whereIn('id', DB::table('investigations')
-                    ->where('investigator_id', $user->id)->select('report_id'))
-            );
+        // BR-08 role scoping lives in one place: Report::scopeVisibleTo.
+        // Investigators only see their own assigned cases.
+        $base = fn () => Report::query()->visibleTo($user);
 
         $stats = [
             'total'     => $base()->count(),
-            'open'      => $base()->whereNotIn('status', ['resolved', 'closed', 'rejected'])->count(),
+            'open'      => $base()->whereNotIn('status', Report::CLOSED_STATUSES)->count(),
             'resolved'  => $base()->where('status', 'resolved')->count(),
-            'high_risk' => $base()->whereIn('priority', ['high', 'critical'])
-                                  ->whereNotIn('status', ['resolved', 'closed', 'rejected'])->count(),
+            'high_risk' => $base()->whereIn('priority', Report::HIGH_RISK_PRIORITIES)
+                                  ->whereNotIn('status', Report::CLOSED_STATUSES)->count(),
         ];
 
         // Last 6 months (zero-filled)

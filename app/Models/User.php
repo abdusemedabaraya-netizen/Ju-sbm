@@ -12,6 +12,15 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles;
 
+    /** Every role name known to the application. */
+    public const ROLES = ['Super Admin', 'Admin', 'Investigator', 'User'];
+
+    /** Roles that may administer the system (see also User::isAdmin()). */
+    public const ADMIN_ROLES = ['Super Admin', 'Admin'];
+
+    /** Roles that operate on cases in a back-office capacity. */
+    public const STAFF_ROLES = ['Super Admin', 'Admin', 'Investigator'];
+
     // avatar is NOT fillable: it is only ever set by the profile photo controller.
     protected $fillable = [
         'name',
@@ -51,6 +60,24 @@ class User extends Authenticatable
 
             return route('profile.photo', $this) . '?v=' . ($this->updated_at?->timestamp ?? now()->timestamp);
         });
+    }
+
+    /** Super Admins and Admins. */
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRole(self::ADMIN_ROLES);
+    }
+
+    /** Anyone with back-office access to cases. */
+    public function isStaff(): bool
+    {
+        return $this->hasAnyRole(self::STAFF_ROLES);
+    }
+
+    /** Investigators only. */
+    public function isInvestigator(): bool
+    {
+        return $this->hasRole('Investigator');
     }
 
     public function department()

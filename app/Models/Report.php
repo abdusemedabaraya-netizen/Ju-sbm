@@ -17,8 +17,17 @@ class Report extends Model
 
     public const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
+    /** Priorities that require extra scrutiny. */
+    public const HIGH_RISK_PRIORITIES = ['high', 'critical'];
+
     /** A report is "still open" unless it is resolved, closed or rejected. */
     public const CLOSED_STATUSES = ['resolved', 'closed', 'rejected'];
+
+    /** Statuses a case occupies while it is actively being worked on. */
+    public const ACTIVE_STATUSES = ['assigned', 'investigating'];
+
+    /** Statuses that represent a finished case. */
+    public const DONE_STATUSES = ['resolved', 'closed'];
 
     protected $fillable = [
         'tracking_number', 'access_code_hash', 'user_id', 'department_id',
@@ -46,10 +55,52 @@ class Report extends Model
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->hasAnyRole(['Super Admin', 'Admin'])) {
+        if ($user->isAdmin()) {
             return $query;
         }
 
         return $query->whereHas('investigation', fn (Builder $q) => $q->where('investigator_id', $user->id));
+    }
+
+    /** Reports that are not yet resolved, closed or rejected. */
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', self::CLOSED_STATUSES);
+    }
+
+    /** Reports carrying a high or critical priority. */
+    public function scopeHighRisk(Builder $query): Builder
+    {
+        return $query->whereIn('priority', self::HIGH_RISK_PRIORITIES);
+    }
+
+    /** Under-review reports that have not been assigned to anyone yet. */
+    public function scopeUnassignedUnderReview(Builder $query): Builder
+    {
+        return $query->where('status', 'under_review')->whereDoesntHave('investigation');
+    }
+
+    /** Human-readable status, e.g. "under_review" -> "Under Review". */
+    public function statusLabel(): string
+    {
+        return static::label($this->status);
+    }
+
+    /** Human-readable priority, e.g. "low" -> "Low". */
+    public function priorityLabel(): string
+    {
+        return static::label($this->priority);
+    }
+
+    /** Human-readable category, e.g. "sexual_harassment" -> "Sexual Harassment". */
+    public function categoryLabel(): string
+    {
+        return static::label($this->category);
+    }
+
+    /** Turn a snake_case token into a title-cased label. */
+    public static function label(?string $value): string
+    {
+        return ucwords(str_replace('_', ' ', (string) $value));
     }
 }

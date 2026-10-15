@@ -57,56 +57,13 @@
       </div>
 
       {{-- Evidence --}}
-      <div class="card mb-3">
-        <div class="card-header"><h3 class="card-title mb-0">Evidence</h3></div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            @forelse ($report->evidences as $evidence)
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                  <i class="bi bi-paperclip"></i> {{ $evidence->original_name }}
-                  <small class="text-secondary">
-                    ({{ number_format(($evidence->size ?? 0) / 1024, 1) }} KB)
-                    @if ($evidence->metadata_stripped)
-                      · <i class="bi bi-shield-check" title="Metadata stripped"></i> metadata removed
-                    @endif
-                  </small>
-                </span>
-                <a href="{{ route('evidence.download', $evidence) }}" class="btn btn-sm btn-outline-primary">
-                  <i class="bi bi-download"></i> Download
-                </a>
-              </li>
-            @empty
-              <li class="list-group-item text-center text-secondary py-4">No evidence attached.</li>
-            @endforelse
-          </ul>
-        </div>
-        @if ($canUploadEvidence)
-          <div class="card-footer">
-            <form action="{{ route('evidence.store', $report) }}" method="POST" enctype="multipart/form-data"
-                  class="row g-2 align-items-end">
-              @csrf
-              <div class="col-12 col-md-8">
-                <label for="files" class="form-label">Add evidence (staff upload)</label>
-                <input type="file" name="files[]" id="files" class="form-control form-control-sm" multiple
-                       accept=".pdf,.docx,.jpg,.jpeg,.png,.mp4">
-                <div class="form-text">PDF, DOCX, JPG, PNG or MP4 · max {{ config('jiacrs.max_files') }} files.</div>
-              </div>
-              <div class="col-12 col-md-4">
-                <button type="submit" class="btn btn-sm btn-primary w-100">
-                  <i class="bi bi-upload"></i> Upload
-                </button>
-              </div>
-            </form>
-          </div>
-        @endif
-      </div>
+      <x-evidence-card :evidences="$report->evidences" :report="$report" :can-upload="$canUploadEvidence" />
 
       {{-- Investigation --}}
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h3 class="card-title mb-0">Investigation</h3>
-          @if ($report->investigation && auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
+          @if ($report->investigation && auth()->user()->isAdmin())
             <form action="{{ route('investigations.destroy', $report->investigation) }}" method="POST"
                   onsubmit="return confirm('Remove this assignment? The report returns to Under Review.');">
               @csrf
@@ -139,38 +96,7 @@
       </div>
 
       {{-- Status history timeline --}}
-      <div class="card mb-3">
-        <div class="card-header"><h3 class="card-title mb-0">Status history</h3></div>
-        <div class="card-body">
-          @forelse ($report->statusHistories as $history)
-            <div class="d-flex {{ $loop->last ? '' : 'mb-3' }}">
-              <div class="me-3 text-center">
-                <i class="bi bi-clock-history text-primary"></i>
-              </div>
-              <div class="flex-grow-1 border-bottom pb-2">
-                <div class="d-flex justify-content-between">
-                  <span>
-                    @if ($history->from_status)
-                      <x-status-badge :status="$history->from_status" />
-                      <i class="bi bi-arrow-right mx-1"></i>
-                    @endif
-                    <x-status-badge :status="$history->to_status" />
-                  </span>
-                  <small class="text-secondary">{{ optional($history->created_at)->format('d M Y H:i') }}</small>
-                </div>
-                <div class="small text-secondary mt-1">
-                  by {{ $history->changedBy?->name ?? 'System' }}
-                  @if ($history->note)
-                    — {{ $history->note }}
-                  @endif
-                </div>
-              </div>
-            </div>
-          @empty
-            <p class="text-secondary mb-0">No status history recorded.</p>
-          @endforelse
-        </div>
-      </div>
+      <x-status-timeline :histories="$report->statusHistories" />
     </div>
 
     {{-- ============ Right column ============ --}}
@@ -183,8 +109,9 @@
             @if ($investigators->isEmpty())
               <p class="text-secondary mb-0">No investigator accounts available.</p>
             @else
-              <form action="{{ route('reports.assign', $report) }}" method="POST">
+              <form action="{{ route('investigations.store') }}" method="POST">
                 @csrf
+                <input type="hidden" name="report_id" value="{{ $report->id }}">
                 <div class="mb-3">
                   <label for="investigator_id" class="form-label">Investigator</label>
                   <select name="investigator_id" id="investigator_id" class="form-select @error('investigator_id') is-invalid @enderror" required>

@@ -11,7 +11,7 @@ abstract class Controller
 
     protected function isAdmin(): bool
     {
-        return auth()->user()?->hasAnyRole(['Admin', 'Super Admin']) ?? false;
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     protected function adminOnly(): void

@@ -11,8 +11,8 @@ class ViewServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        // Count badges for the Reports submenu; only computed for the sidebar.
-        View::composer('layouts.partials.sidebar', ReportCountsComposer::class);
+        // Count badges for the Reports link and the report page presets.
+        View::composer(['layouts.partials.sidebar', 'reports.index'], ReportCountsComposer::class);
 
         // Count badges for the Investigations submenu (also reused by the tabs).
         View::composer(['layouts.partials.sidebar', 'investigations.index'], InvestigationCountsComposer::class);

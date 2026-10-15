@@ -156,7 +156,7 @@ class ReportModuleTest extends TestCase
 
         $this->actingAs($reporter)->post('/report', $this->validPayload([
             'anonymous' => false,
-        ]))->assertRedirect(route('report.submitted'));
+        ]))->assertRedirect(route('my.reports.submitted'));
 
         $report = Report::firstOrFail();
         $this->assertFalse($report->anonymous);
@@ -171,7 +171,7 @@ class ReportModuleTest extends TestCase
         // The checkbox is checked by default, so the browser submits anonymous=1.
         $this->actingAs($reporter)->post('/report', $this->validPayload([
             'anonymous' => '1',
-        ]))->assertRedirect(route('report.submitted'));
+        ]))->assertRedirect(route('my.reports.submitted'));
 
         $report = Report::firstOrFail();
         $this->assertTrue($report->anonymous);
@@ -188,7 +188,7 @@ class ReportModuleTest extends TestCase
         unset($payload['anonymous']);
 
         $this->actingAs($reporter)->post('/report', $payload)
-            ->assertRedirect(route('report.submitted'));
+            ->assertRedirect(route('my.reports.submitted'));
 
         $report = Report::firstOrFail();
         $this->assertFalse($report->anonymous);

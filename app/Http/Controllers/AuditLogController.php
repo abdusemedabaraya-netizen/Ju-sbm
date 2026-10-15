@@ -2,24 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AuditLogFilterRequest;
 use App\Models\AuditLog;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request)
+    public function index(AuditLogFilterRequest $request)
     {
-        $request->validate([
-            'action' => ['nullable', 'string', 'max:100'],
-            'from'   => ['nullable', 'date'],
-            'to'     => ['nullable', 'date'],
-        ]);
+        $filters = $request->validated();
 
         $logs = AuditLog::with('user:id,name')
-            ->when($request->action, fn ($q, $v) => $q->where('action', $v))
-            ->when($request->from, fn ($q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
-            ->when($request->to, fn ($q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
+            ->when($filters['action'] ?? null, fn ($q, $v) => $q->where('action', $v))
+            ->when($filters['from'] ?? null, fn ($q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
+            ->when($filters['to'] ?? null, fn ($q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();

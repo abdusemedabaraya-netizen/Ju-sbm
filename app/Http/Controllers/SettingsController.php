@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateSettingsRequest;
 use App\Services\AuditLogger;
 use App\Services\SiteSettings;
-use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
@@ -13,15 +13,9 @@ class SettingsController extends Controller
         return view('settings.index', ['s' => SiteSettings::all()]);
     }
 
-    public function update(Request $request)
+    public function update(UpdateSettingsRequest $request)
     {
-        $data = $request->validate([
-            'site_name'     => ['required', 'string', 'max:100'],
-            'contact_email' => ['nullable', 'email', 'max:255'],
-            'contact_phone' => ['nullable', 'string', 'max:30'],
-            'max_files'     => ['required', 'integer', 'min:1', 'max:10'],
-            'max_file_mb'   => ['required', 'integer', 'min:1', 'max:50'],
-        ]);
+        $data = $request->validated();
 
         SiteSettings::save([
             'site_name'                => $data['site_name'],
@@ -29,8 +23,8 @@ class SettingsController extends Controller
             'contact_phone'            => $data['contact_phone'] ?? '',
             'max_files'                => $data['max_files'],
             'max_file_mb'              => $data['max_file_mb'],
-            'mail_notifications'       => $request->boolean('mail_notifications') ? 1 : 0,
-            'public_reporting_enabled' => $request->boolean('public_reporting_enabled') ? 1 : 0,
+            'mail_notifications'       => (int) $request->boolean('mail_notifications'),
+            'public_reporting_enabled' => (int) $request->boolean('public_reporting_enabled'),
         ]);
 
         AuditLogger::log('settings.updated');

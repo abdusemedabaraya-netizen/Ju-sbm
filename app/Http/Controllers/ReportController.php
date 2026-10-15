@@ -2,36 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReportFilterRequest;
+use App\Http\Requests\UpdateReportRequest;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\ReportWorkflow;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
     private const PER_PAGE = 15;
 
-    /** Sidebar presets -> report filters. */
-    private const VIEWS = ['new', 'under_review', 'in_progress', 'high_risk', 'resolved_closed', 'rejected'];
-
-    public function index(Request $request)
+    public function index(ReportFilterRequest $request)
     {
         $this->authorize('viewAny', Report::class);
 
-        $filters = $request->validate([
-            'search' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', Rule::in(Report::STATUSES)],
-            'priority' => ['nullable', Rule::in(Report::PRIORITIES)],
-            'view' => ['nullable', Rule::in(self::VIEWS)],
-            'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')],
-            'category' => ['nullable', 'string', 'max:50', Rule::exists('categories', 'slug')],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date'],
-        ]);
+        $filters = $request->validated();
 
         $reports = Report::query()
             ->visibleTo($request->user())
@@ -59,7 +47,7 @@ class ReportController extends Controller
             ->withQueryString();
 
         $departments = Department::orderBy('name')->get(['id', 'name']);
-        $categories = Category::orderBy('sort_order')->orderBy('name')->get(['slug', 'name']);
+        $categories  = Category::orderBy('sort_order')->orderBy('name')->get(['slug', 'name']);
 
         return view('reports.index', compact('reports', 'departments', 'categories', 'filters'));
     }
@@ -86,7 +74,7 @@ class ReportController extends Controller
             ? User::role('Investigator')->orderBy('name')->get(['id', 'name'])
             : [];
 
-        $allowedStatuses = ReportWorkflow::allowedNext($report, $user);
+        $allowedStatuses   = ReportWorkflow::allowedNext($report, $user);
         $canChangePriority = $user->can('changePriority', $report);
         $canUploadEvidence = $user->can('uploadEvidence', $report);
 
@@ -95,15 +83,11 @@ class ReportController extends Controller
         ));
     }
 
-    public function update(Request $request, Report $report, ReportWorkflow $workflow)
+    public function update(UpdateReportRequest $request, Report $report, ReportWorkflow $workflow)
     {
         $this->authorize('update', $report);
 
-        $data = $request->validate([
-            'status' => ['nullable', Rule::in(Report::STATUSES)],
-            'priority' => ['nullable', Rule::in(Report::PRIORITIES)],
-            'note' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $request->validated();
 
         // BR-10: priority is admin-only (enforced again by the policy).
         if (! empty($data['priority']) && $data['priority'] !== $report->priority) {
@@ -119,30 +103,7 @@ class ReportController extends Controller
         return back()->with('success', 'Report updated successfully.');
     }
 
-    public function assign(Request $request, Report $report, ReportWorkflow $workflow)
-    {
-        // BR-07: admin only, and only while Under Review.
-        $this->authorize('assign', $report);
-
-        $data = $request->validate([
-            'investigator_id' => ['required', Rule::exists('users', 'id')],
-        ]);
-
-        $investigator = User::role('Investigator')->findOrFail($data['investigator_id']);
-
-        // Conflict of interest: nobody investigates a report they submitted.
-        if ($report->user_id && $report->user_id === $investigator->id) {
-            return back()->withInput()->withErrors([
-                'investigator_id' => 'An investigator cannot handle a report they submitted.',
-            ]);
-        }
-
-        $workflow->assign($report, $investigator, $request->user());
-
-        return redirect()->route('reports.show', $report)->with('success', 'Investigator assigned.');
-    }
-
-    public function destroy(Request $request, Report $report)
+    public function destroy(Report $report)
     {
         $this->authorize('delete', $report);
 
@@ -157,14 +118,15 @@ class ReportController extends Controller
     private function applyView($query, string $view): void
     {
         match ($view) {
-            'new' => $query->where('status', 'submitted'),
-            'under_review' => $query->where('status', 'under_review'),
-            'in_progress' => $query->whereIn('status', ['assigned', 'investigating']),
-            'high_risk' => $query->whereIn('priority', ['high', 'critical'])
+            'open'            => $query->whereNotIn('status', Report::CLOSED_STATUSES),
+            'new'             => $query->where('status', 'submitted'),
+            'under_review'    => $query->where('status', 'under_review'),
+            'in_progress'     => $query->whereIn('status', Report::ACTIVE_STATUSES),
+            'high_risk'       => $query->whereIn('priority', Report::HIGH_RISK_PRIORITIES)
                 ->whereNotIn('status', Report::CLOSED_STATUSES),
-            'resolved_closed' => $query->whereIn('status', ['resolved', 'closed']),
-            'rejected' => $query->where('status', 'rejected'),
-            default => null,
+            'resolved_closed' => $query->whereIn('status', Report::DONE_STATUSES),
+            'rejected'        => $query->where('status', 'rejected'),
+            default           => null,
         };
     }
 }

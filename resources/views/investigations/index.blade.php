@@ -7,7 +7,7 @@
 @endsection
 
 @php
-  $isAdmin = auth()->user()?->hasAnyRole(['Super Admin', 'Admin']);
+  $isAdmin = auth()->user()?->isAdmin();
   $hasFilters = collect(request()->only(['status', 'priority', 'search']))
     ->filter(fn ($value) => $value !== null && $value !== '')->isNotEmpty();
   $tabStatuses = $tab === 'completed'

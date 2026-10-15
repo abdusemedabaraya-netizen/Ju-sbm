@@ -194,69 +194,10 @@
       </div>
 
       {{-- Evidence for the case. --}}
-      <div class="card mb-3">
-        <div class="card-header"><h3 class="card-title mb-0">Evidence</h3></div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            @forelse ($report?->evidences ?? [] as $evidence)
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                  <i class="bi bi-paperclip"></i> {{ $evidence->original_name }}
-                  @if ($evidence->metadata_stripped)
-                    <i class="bi bi-shield-check text-success" title="Metadata stripped"></i>
-                  @endif
-                </span>
-                <a href="{{ route('evidence.download', $evidence) }}" class="btn btn-sm btn-outline-primary">
-                  <i class="bi bi-download"></i>
-                </a>
-              </li>
-            @empty
-              <li class="list-group-item text-center text-secondary py-4">No evidence attached.</li>
-            @endforelse
-          </ul>
-        </div>
-        @if ($flags['canUpload'] && $report)
-          <div class="card-footer">
-            <form action="{{ route('evidence.store', $report) }}" method="POST" enctype="multipart/form-data">
-              @csrf
-              <div class="mb-2">
-                <input type="file" name="files[]" class="form-control form-control-sm" multiple
-                       accept=".pdf,.docx,.jpg,.jpeg,.png,.mp4">
-                <div class="form-text">PDF, DOCX, JPG, PNG or MP4.</div>
-              </div>
-              <button class="btn btn-sm btn-primary w-100"><i class="bi bi-upload"></i> Upload evidence</button>
-            </form>
-          </div>
-        @endif
-      </div>
+      <x-evidence-card :evidences="$report?->evidences ?? collect()" :report="$report" :can-upload="$flags['canUpload']" />
 
       {{-- Status history. --}}
-      <div class="card mb-3">
-        <div class="card-header"><h3 class="card-title mb-0">Case timeline</h3></div>
-        <div class="card-body">
-          @forelse ($report?->statusHistories ?? [] as $history)
-            <div class="d-flex {{ $loop->last ? '' : 'mb-3' }}">
-              <div class="me-3"><i class="bi bi-clock-history text-primary"></i></div>
-              <div class="flex-grow-1 border-bottom pb-2">
-                <span>
-                  @if ($history->from_status)
-                    <x-status-badge :status="$history->from_status" />
-                    <i class="bi bi-arrow-right mx-1"></i>
-                  @endif
-                  <x-status-badge :status="$history->to_status" />
-                </span>
-                <div class="small text-secondary mt-1">
-                  {{ optional($history->created_at)->format('d M Y H:i') }}
-                  · by {{ $history->changedBy?->name ?? 'System' }}
-                  @if ($history->note) — {{ $history->note }} @endif
-                </div>
-              </div>
-            </div>
-          @empty
-            <p class="text-secondary mb-0">No status history recorded.</p>
-          @endforelse
-        </div>
-      </div>
+      <x-status-timeline :histories="$report?->statusHistories ?? collect()" title="Case timeline" />
 
       @if ($flags['canRemove'])
         <div class="card border-danger">

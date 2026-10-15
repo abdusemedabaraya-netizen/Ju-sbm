@@ -18,19 +18,19 @@ class InvestigationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin', 'Investigator']);
+        return $user->isStaff();
     }
 
     public function view(User $user, Investigation $investigation): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin'])
+        return $user->isAdmin()
             || $investigation->investigator_id === $user->id;
     }
 
     /** Assigning is an admin-only action. */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin']);
+        return $user->isAdmin();
     }
 
     /** BR-09: findings and recommendations belong to the assigned investigator. */
@@ -41,13 +41,13 @@ class InvestigationPolicy
 
     public function delete(User $user, Investigation $investigation): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin']);
+        return $user->isAdmin();
     }
 
     /** Internal case notes: staff on the case (admins or the owner). */
     public function comment(User $user, Investigation $investigation): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin'])
+        return $user->isAdmin()
             || $investigation->investigator_id === $user->id;
     }
 
@@ -68,7 +68,7 @@ class InvestigationPolicy
     /** Admin closes a resolved case: resolved -> closed. */
     public function close(User $user, Investigation $investigation): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Admin'])
+        return $user->isAdmin()
             && $investigation->report?->status === 'resolved';
     }
 
